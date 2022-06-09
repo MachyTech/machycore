@@ -20,7 +20,6 @@
 
 #include <machycore.h>
 #include "machygl.h"
-#include <api.h>
 
 namespace machyscene
 {

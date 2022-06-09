@@ -1,171 +1,149 @@
 #ifndef API_H_
 #define API_H_
 
-#include <boost/asio.hpp>
-//#include <boost/filesystem.hpp>
-
 #include <iostream>
-#include <string>
-#include <memory>
-#include <thread>
-#include <atomic>
-#include <mutex>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/steady_timer.hpp>
 
-#include <fstream>
+#include <boost/asio.hpp>
+#include <boost/bind/bind.hpp>
 
+#include <nlohmann/json.hpp>
 #include <machycore.h>
 
-const unsigned int DEFAULT_THREAD_POOL_SIZE = 2;
+#include <functional>
+#include <iostream>
+#include <string>
 
-using namespace boost;
+using boost::asio::steady_timer;
+using boost::asio::ip::tcp;
+using std::placeholders::_1;
+using std::placeholders::_2;
 
-struct GLdata
+namespace machyapi
 {
-    float x, y;
-    GLdata(float a[2]) : x(a[0]/10), y(a[1]/10)
-    {}
-};
+    using boost::asio::ip::tcp;
+    
+    class session
+    {
+        public:
+            session(boost::asio::io_service& io_service)
+		        : socket_(io_service)
+            {}
 
-namespace machyAPI
-{
-    /*
-     * machytech API
-     */
-    namespace machysockets_aSync
-     {
-        /*
-         * machy asynchronous sockets
-         */
-        int asynchronous_server();
-        /*
-         * create an asynchronous server
-         */
-        int asynchronous_server(std::string port);
-        /*
-         * overload when virtual position data is passed
-         */
-        class service
-        {
-            /*
-            * the service class implements the function
-            * provided by the server to the clients.
-            * One instance of this class is intended
-            * to handle a single client by reading the
-            * request, processing it, and then sending
-            * back the response message.
-            */
-            public:
-                service(std::shared_ptr<asio::ip::tcp::socket> sock) : m_sock(sock)
-                {}
-                void StartHandling();
-                /*
-                * this method starts handling the client by initiating
-                * the asynchronous reading operation to read the request
-                * message from the client specifying the onRequestReceived()
-                * method as a callback.
-                */
-            private:
-                void onRequestRecieved(const boost::system::error_code& ec, std::size_t bytes_transferred);
-                /*
-                * checks for succesfull request then processrequest is
-                * called to prepare response message and the asynchronous
-                * writing operation is initiated
-                */
-                void onResponseSend(const boost::system::error_code& ec, std::size_t bytes_transferred);
-                /*
-                * check request operation succeeded then cleanup
-                */
-                void onFinish(){ delete this; };
-                /*
-                * cleanup
-                */
-                std::string ProcessRequest(asio::streambuf& request);
-                /*
-                 * state machine implementation
-                 */
-                void _state_test001(int cycles);
-                /*
-                 * this state implements a cpu load
-                 */
-                void _state_trajsim001();
-                /*
-                 * this state implements a trajectory simulator
-                 */
-                std::shared_ptr<asio::ip::tcp::socket> m_sock;
-                std::string m_response;
-                asio::streambuf m_request;
-        };
-        
-        class acceptor
-        {
-            /*
-            * the acceptor class accepts the connection
-            * request from clients and instantiating 
-            * objects of the service class
-            */
-            public:
-                acceptor(asio::io_service&ios, unsigned short port_num) :
-                    m_ios(ios), 
-                    m_acceptor(m_ios, asio::ip::tcp::endpoint(asio::ip::address_v4::any(), port_num)), 
-                    m_isStopped(false)
-                {}
-                void start(){
-                    std::cout<<"start acceptor\n";
-                    m_acceptor.listen();
-                    InitAccept();
-                }
-                /*
-                * start accepting incoming connection requests
-                */
-                void stop(){ m_isStopped.store(true);}
-                /*
-                * stop accepting incoming connection requests
-                */
-            private:
-                void InitAccept();
-                /*
-                * constructs an active socket object and initiates
-                * the asynchronous accept operation.
-                */
-                void onAccept(const boost::system::error_code& ec,
-                    std::shared_ptr<asio::ip::tcp::socket> sock);
-                /*
-                * if asynchronous operation was succesfull an instance
-                * of the service class is created.
-                */
-                asio::io_service&m_ios;
-                asio::ip::tcp::acceptor m_acceptor;
-                std::atomic<bool>m_isStopped;
-        };
+            tcp::socket& socket()
+            {
+                return socket_;
+            }
 
-        class server
-        {
-            /*
-            * the server class represents the server
-            * itself, using the acceptor and service
-            * classes.
-            */
-            public:
-                server()
+            void start()
+	        {
+		        socket_.async_read_some(boost::asio::buffer(data_, max_length),
+			        boost::bind(&session::handle_read, this,
+			        boost::asio::placeholders::error,
+			        boost::asio::placeholders::bytes_transferred));
+	        }
+
+        private:
+            	void handle_read(const boost::system::error_code& error, size_t bytes_transferred)
                 {
-                    m_work.reset(new asio::io_service::work(m_ios));
+                    if(!error)
+                    {
+                        boost::asio::async_write(socket_,
+                        boost::asio::buffer(data_, max_length),
+                        boost::bind(&session::handle_write, this,
+                            boost::asio::placeholders::error));
+                    }
+                    else
+                    {
+                        delete this;
+                    }
                 }
-                void start(unsigned short port_num, unsigned int thread_pool_size);
-                /*
-                * starts a server on specified port and listens for asynchronous
-                * operations on defined number of threads.
-                */
-                void stop();
-                /*
-                 * stops the acceptor instance and stops all trheads
-                 * defined in start.
-                */
-            private:
-                asio::io_service m_ios;
-                std::unique_ptr<asio::io_service::work>m_work;
-                std::unique_ptr<acceptor>acc;
-                std::vector<std::unique_ptr<std::thread>>m_thread_pool;
-        };
-    }
+
+            void handle_write(const boost::system::error_code& error)
+            {
+                if (!error)
+                {
+                    socket_.async_read_some(boost::asio::buffer(data_, max_length),
+                        boost::bind(&session::handle_read, this,
+                            boost::asio::placeholders::error,
+                            boost::asio::placeholders::bytes_transferred));
+                }
+            }
+
+            tcp::socket socket_;
+	        enum { max_length = 1024 };
+	        char data_[max_length];
+    };
+
+    class server
+    {
+    public:
+        server(boost::asio::io_service& io_service, short port)
+            :io_service_(io_service),
+            acceptor_(io_service, tcp::endpoint(tcp::v4(), port))
+        {
+            start_accept();
+        }
+    private:
+        void start_accept()
+        {
+            session* new_session = new session(io_service_);
+
+            acceptor_.async_accept(new_session->socket(),
+                boost::bind(&server::handle_accept, this, 
+                    new_session, boost::asio::placeholders::error));
+        }
+
+        void handle_accept(session* new_session, const boost::system::error_code& error)
+        {
+            if (!error)
+                new_session->start();
+            else
+                delete new_session;
+            
+            start_accept();
+        }
+
+        boost::asio::io_service& io_service_;
+        tcp::acceptor acceptor_;
+    };
+
+    class client
+    {
+        public:
+            client(boost::asio::io_context& io_context, machycore::controller_data* controller_data)
+                : socket_(io_context),
+                    deadline_(io_context),
+                    heartbeat_timer_(io_context),
+                    printer_(io_context),
+                    _controller(controller_data)
+            {}
+            void start(tcp::resolver::results_type);
+            void stop();
+        private:
+            void start_connect(tcp::resolver::results_type::iterator);
+            void handle_connect(const boost::system::error_code&,
+                tcp::resolver::results_type::iterator);
+            void start_read();
+            void start_write();
+            void handle_read(const boost::system::error_code& error, std::size_t n);
+            void handle_write(const boost::system::error_code& error);
+            void check_deadline();
+            void print();
+        private:
+            bool stopped_ = false;
+            tcp::resolver::results_type endpoints_;
+            tcp::socket socket_;
+            std::string input_buffer_;
+            steady_timer deadline_;
+            steady_timer heartbeat_timer_;
+            steady_timer printer_;
+            machycore::controller_data* _controller;
+    };
 }
 #endif

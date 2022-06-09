@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.1)
+cmake_minimum_required(VERSION 3.10)
 
 # name of the project
 project(machycore VERSION 0.0.1 DESCRIPTION "machycore functions used by machytechs projecting system")

@@ -11,6 +11,7 @@
 #include <condition_variable>
 
 #include <iostream>
+#include "envs.h"
 
 namespace machycore
 {
@@ -55,5 +56,51 @@ namespace machycore
      * from machytech core
      */
     void print_data_stats();
+    
+    class Environment
+    {
+        std::vector<Variables*> *variables;
+        public:
+            Environment(){
+                variables = new std::vector<Variables*>;
+            }
+            ~Environment(){
+                std::vector<Variables*>::iterator it;
+
+                for (it = variables->begin(); it < variables->end(); it++)
+                {
+                    delete *it;
+                }
+                delete variables;
+            }
+
+            void appendVariable(Variables* variable)
+            {
+                variables->push_back( variable );
+            }
+            
+            std::string get(int varNum)
+            {
+                std::vector<Variables*>::iterator it = variables->begin () + varNum;
+                return (*it)->get_var();
+            }
+
+            void print()
+            {
+                std::vector<Variables*>::iterator it;
+                for (it = variables->begin (); it < variables->end (); it++)
+                {
+                    std::string str = (*it)->get_var();
+                    (*it)->print();
+                }
+            }
+    };
+
+    struct controller_data{
+        float normalizedLX;
+        float normalizedLY;
+        float normalizedMagnitude;
+        int xSuccess;
+    };
 }
 #endif

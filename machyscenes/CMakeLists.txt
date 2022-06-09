@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.1)
+cmake_minimum_required(VERSION 3.10)
 
 # name of the project
 project(machyscenes VERSION 0.0.1 DESCRIPTION "scenes used by machytechs projecting system")
@@ -38,9 +38,9 @@ target_include_directories(machyscenes PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includ
 
 # header files
 include_directories(${CMAKE_SOURCE_DIR}/vendor/glm)
-include_directories(${CMAKE_SOURCE_DIR}/lib/machycore/include)
-include_directories(${CMAKE_SOURCE_DIR}/lib/machygl/include)
-include_directories(${CMAKE_SOURCE_DIR}/lib/api/include)
+include_directories(${CMAKE_SOURCE_DIR}/libs/machycore/machycore/include)
+include_directories(${CMAKE_SOURCE_DIR}/libs/machycore/machygl/include)
+include_directories(${CMAKE_SOURCE_DIR}/libs/machycore/api/include)
 
 if (NOT TARGET glfw)
     add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/glfw vendor/glfw)

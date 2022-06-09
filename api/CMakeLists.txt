@@ -1,26 +1,25 @@
-cmake_minimum_required(VERSION 3.20.1)
+cmake_minimum_required(VERSION 3.10)
 
 # name of the project
 project(machyapi VERSION 0.0.1 DESCRIPTION "machyapi functions used by machytechs projecting system")
 
-add_library(machyapi SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/api.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/src/sync_api.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/src/http_async_api.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/src/tcp_async_client_api.cpp)
+add_library(machyapi SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/api.cpp)
 
 set_target_properties(machyapi PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(machyapi PROPERTIES SOVERSION 0.0.1)
 
-target_include_directories(machyapi PUBLIC ${CMAKE_SOURCE_DIR}/lib/api/include)
+target_include_directories(machyapi PUBLIC ${CMAKE_SOURCE_DIR}/libs/machycore/api/include)
 
-find_package( Boost 1.58 EXACT REQUIRED system )
+find_package( Boost 1.58 REQUIRED system )
 include_directories(${Boost_INCLUDE_DIRS})
 
 if (NOT TARGET machycore)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/lib/machycore lib/machycore)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
-
-target_link_libraries(machyapi machycore ${Boost_LIBRARIES})
+if (NOT TARGET nlohmann_json)
+    add_subdirectory(libs/json libs/json)
+endif()
+target_link_libraries(machyapi PRIVATE ${Boost_LIBRARIES} nlohmann_json machycore)
 
 # use boost enhanced functions(?)
 if(BOOST_ENHANCED)

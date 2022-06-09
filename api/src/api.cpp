@@ -1,315 +1,157 @@
 #include "api.h"
-#include "http_async_api.h"
 
-namespace machyAPI
+namespace machyapi
 {
-    namespace machysockets_aSync
+    void client::print()
     {
-        int create_asynchronous_socket()
-        {
-            // size pending connection request
-            const int BACKLOG_SIZE = 30;
-            // define a port
-            unsigned short port_num = 3333;
-            // creating a server endpoint
-            asio::ip::tcp::endpoint ep(asio::ip::address_v4::any(), port_num);
-            // instance of io service class
-            asio::io_service ios;
-            try{
-                // acceptor socket object
-                asio::ip::tcp::acceptor acceptor(ios, ep.protocol());
-                // binding socket to endpoint
-                acceptor.bind(ep);
-                // listen for incoming connection request
-                acceptor.listen(BACKLOG_SIZE);
-                // create active socket
-                asio::ip::tcp::socket sock(ios);
-                // connect to client
-                acceptor.accept(sock);
-                //acceptor.async_accept(sock, accept_handler);
-                //readFromSocket(sock);
-                ios.run();
-            }
-            catch(system::system_error &e) {
-                std::cout<< "Error occured! Error code = "<<e.code()
-                    << ". Message: "<<e.what();
-                return e.code().value();
-            }
-            return 0;
-        }
-
-        int asynchronous_server()
-        {
-            unsigned short port_num = 3333;
-
-            try {
-                server srv;
-
-                unsigned int thread_pool_size = std::thread::hardware_concurrency() * 2;
-                if (thread_pool_size == 0)
-                    thread_pool_size = DEFAULT_THREAD_POOL_SIZE;
-                
-                srv.start(port_num, thread_pool_size);
-                std::this_thread::sleep_for(std::chrono::seconds(5));
-                srv.stop();
-            }
-            catch (system::system_error&e) {
-                std::cout << "Error occured! Error code = "<<e.code()
-                    <<". Message: "<<e.what();
-            }
-            return 0;
-        }
-
-        int asynchronous_server(std::string port)
-        {
-            unsigned short port_num = std::stoi(port);
-
-            try {
-                server srv;
-
-                unsigned int thread_pool_size = std::thread::hardware_concurrency() * 2;
-                if (thread_pool_size == 0)
-                    thread_pool_size = DEFAULT_THREAD_POOL_SIZE;
-                
-                srv.start(port_num, thread_pool_size);
-                while(1){}
-            }
-            catch (system::system_error&e) {
-                std::cout << "Error occured! Error code = "<<e.code()
-                    <<". Message: "<<e.what();
-            }
-            return 0;
-        }
-
-        void service::StartHandling()
-        {
-            asio::async_read_until(*m_sock.get(), m_request, "\n\n", 
-                [this]( const boost::system::error_code& ec, std::size_t bytes_transferred)
-                {onRequestRecieved(ec, bytes_transferred);});
-        }
-
-        void service::onRequestRecieved(const boost::system::error_code& ec, std::size_t bytes_transferred )
-        {
-            if (ec != 0) {
-                std::cout<< "Error occured! Error code = "<<ec.value()<<". Message: "<<ec.message();
-                onFinish();
-                return;
-            }
-            m_response = ProcessRequest(m_request);
-            //machycore::print_vpos_data();
-            asio::async_write(*m_sock.get(), asio::buffer(m_response),
-                    [this]( const boost::system::error_code& ec, std::size_t bytes_transferred)
-                        { onResponseSend(ec, bytes_transferred);});
-        }   
-
-        void service::onResponseSend(const boost::system::error_code& ec, std::size_t bytes_transferred)
-        {
-            if (ec != 0) {
-                std::cout<< "Error occured! Error code = "<<ec.value()<<". Message: "<<ec.message();
-            }
-            onFinish();
-        }
-
-        std::string service::ProcessRequest(asio::streambuf& request)
-        {
-            std::istream is(&request);
-            std::string request_line;
-
-            // state machine (use first ten characters finished with ":")
-
-            std::getline(is, request_line, ':');
-            std::cout<<"recieved: "<<request_line<<std::endl;
-
-            if(request_line.compare(0,10,"TEST000001")==0)
-            {
-                _state_test001(10000);
-                std::string response("[TEST000001] OK\n");
-                return response;
-            }
-
-            if(request_line.compare(0, 10, "TEST000002")==0)
-            {
-                std::string line;
-                std::getline(is, line, '\n');
-                std::cout<<std::stoi(line)<<std::endl;
-                _state_test001(std::stoi(line));
-                std::string response("[TEST000002] CPULOAD ");
-                response+=line + ", OK\n";
-                return response;
-            }
-
-            if(request_line.compare(0, 10, "VIRPOS0001")==0)
-            {
-                std::string line;
-                while(is)
-                {
-                    while(std::getline(is, line, '\n'))
-                    {
-                        std::stringstream ss(line);
-                        float value_vir[5];
-                        for (int i=0; i<5; i++)
-                        {
-                            ss >> value_vir[i];
-                            ss.ignore();
-                        }
-                        machycore::virposition->push_back( value_vir );
-                    }
-                }
-                std::string response("[VIRPOS0001] OK\n");
-                return response;
-            }
-
-            if(request_line.compare(0,10,"ECHO000001")==0)
-            {
-                std::string line;
-                std::getline(is, line, '\n');
-                std::string response("[ECHO000001] ");
-                response += line+"\n";
-                return response;
-            }
-
-            if(request_line.compare(0, 10, "TRAJSIM001")==0){
-                std::string line;
-                while (is)
-                {
-                    while(std::getline(is, line, '\n'))
-                    {
-                        std::stringstream ss(line);
-                        float value[2];
-                        float value_vir[5];
-                        for (int i=0; i<2; i++)
-                        {
-                            ss >> value[i];
-                            ss.ignore();
-                        }
-                        machycore::trajectory->push_back( value );
-                        value_vir[0] = value[0];
-                        value_vir[1] = value[1];
-                        for (int i=0; i<3; i++)
-                        {
-                            ss >> value_vir[i+2];
-                            ss.ignore();
-                        }
-                        machycore::virposition->push_back( value_vir );
-                    }
-                }
-                std::string response("[TRAJSIM001] OK\n");
-                return response;
-            }
-
-            if(request_line.compare(0, 10, "TRAJSIM002")==0){
-                std::string line;
-                while(is)
-                {
-                    while(std::getline(is, line, '\n'))
-                    {
-                        std::stringstream ss(line);
-                        float value[2];
-                        for (int i=0; i<2; i++)
-                        {
-                            ss >> value[i];
-                            ss.ignore();
-                        }
-                        machycore::trajectory->push_back( value );
-                    }
-                }
-                std::string response("[TRAJSIM002] OK\n");
-                return response;
-            }
-
-            if(request_line.compare(0, 10, "START00001")==0){
-                {
-                    std::lock_guard<std::mutex> lk(machycore::m_machydata);
-                    machycore::load_scene = true;
-                    machycore::render_ready.notify_one();
-                }
-
-                // wait for success message
-                {
-                    std::unique_lock<std::mutex> lk(machycore::m_machydata);
-                    machycore::render_ready.wait(lk, []{return machycore::scene_loaded;});
-                }
-
-                std::string response("[START00001] OK\n");
-                return response;
-            }
-
-            else{
-                std::string response("NOT RECOGNIZED\n");
-                return response;
-            }
-
-            std::string response("NOT RECOGNIZED\n");
-            return response;
-        }
+        nlohmann::json json;
+        json["normalizedLX"] = _controller->normalizedLX;
+        json["normalizedLY"] = _controller->normalizedLY;
+        json["normalizedMagnitude"] = _controller->normalizedMagnitude;
+        std::cout<<"controller: " << json << std::endl;
         
-        void service::_state_test001(int cycles)
+        printer_.expires_after(std::chrono::seconds(1));
+        printer_.async_wait(std::bind(&client::print, this));
+    }
+
+    void client::start(tcp::resolver::results_type endpoints)
+    {
+        // start the connect actor
+        endpoints_ = endpoints;
+        start_connect(endpoints_.begin());
+        printer_.async_wait(std::bind(&client::print, this));
+        deadline_.async_wait(std::bind(&client::check_deadline, this));
+    }
+
+    void client::stop()
+    {
+        stopped_ = true;
+        boost::system::error_code ignored_error;
+        socket_.close(ignored_error);
+        deadline_.cancel();
+        heartbeat_timer_.cancel();
+        printer_.cancel();
+    }
+
+    void client::start_connect(tcp::resolver::results_type::iterator endpoint_iter)
+    {
+        if (endpoint_iter != endpoints_.end())
         {
-            int i=0;
-            std::cout<<"starting cpu process emulation\n";
-            while (i != cycles)
-                i++;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            std::cout<<"finished...\n";
+            std::cout << "Trying " << endpoint_iter->endpoint() << "...\n";
+            
+            deadline_.expires_after(std::chrono::seconds(60));
+            socket_.async_connect(endpoint_iter->endpoint(), std::bind(&client::handle_connect,
+                this, _1, endpoint_iter));
         }
-
-        void acceptor::InitAccept()
+        else
         {
-            std::shared_ptr<asio::ip::tcp::socket> 
-                sock(new asio::ip::tcp::socket(m_ios));
-            m_acceptor.async_accept(*sock.get(), 
-                [this, sock](const boost::system::error_code& error)
-                {onAccept(error, sock);});
-        }
-
-        void acceptor::onAccept(const boost::system::error_code& ec,
-            std::shared_ptr<asio::ip::tcp::socket> sock)
-        {
-            if (ec == 0) {
-                (new service(sock))->StartHandling();
-            }
-            else {
-                std::cout<< "Error occured! Error code = "<<ec.value()<< ". Message: "<<ec.message();
-            }
-            // init next async accept operation
-            if (!m_isStopped.load()) {
-                InitAccept();
-            }
-            else {
-                // stop accepting incoming connections
-                m_acceptor.close();
-            }
-        }
-
-        void server::start(unsigned short port_num, unsigned int thread_pool_size)
-        {
-            assert(thread_pool_size > 0);
-            // create and start acceptor
-            acc.reset(new acceptor(m_ios, port_num));
-            acc->start();
-            // create specified number of threads and add them to the pool
-            for (unsigned int i = 0; i < thread_pool_size; i++)
-            {
-                std::unique_ptr<std::thread> th(
-                    new std::thread([this]()
-                    {
-                        m_ios.run();
-                    }));
-                m_thread_pool.push_back(std::move(th));
-            }
-        }
-
-        void server::stop()
-        {
-            acc->stop();
-            m_ios.stop();
-
-            for (auto& th : m_thread_pool)
-            {
-                th->join();
-            }
+            stop();
         }
     }
+
+    void client::handle_connect(const boost::system::error_code& error,
+        tcp::resolver::results_type::iterator endpoint_iter)
+    {
+        if (stopped_)
+            return;
+        
+        if(!socket_.is_open())
+        {
+            std::cout << "Connect timed out\n";
+            start_connect(++endpoint_iter);
+        }
+        else if (error)
+        {
+            std::cout << "Connect error: " << error.message() << "\n";
+            socket_.close();
+            start_connect(++endpoint_iter);
+        }
+        else
+        {
+            std::cout << "Connected to " << endpoint_iter->endpoint() << "\n";
+            start_write();
+            start_read();
+        }
+    }
+    
+    void client::start_read()
+    {
+        deadline_.expires_after(std::chrono::seconds(30));
+
+        boost::asio::async_read_until(socket_, 
+            boost::asio::dynamic_buffer(input_buffer_), "\n",
+            std::bind(&client::handle_read, this, _1, _2));
+    }
+
+    void client::handle_read(const boost::system::error_code& error, std::size_t n)
+    {
+        if (stopped_)
+            return;
+        
+        if (!error)
+        {
+            std::string line(input_buffer_.substr(0, n - 1));
+            input_buffer_.erase(0, n);
+
+            if (!line.empty())
+            {
+                nlohmann::json json = nlohmann::json::parse(line);
+                std::cout << "Received: " << json << "\n";
+                _controller->normalizedLX = json["normalizedLX"].get<float>();
+                _controller->normalizedLY = json["normalizedLY"].get<float>();
+                _controller->normalizedMagnitude = json["normalizedMagnitude"].get<float>();
+            }
+
+            start_read();
+        }
+        else
+        {
+            std::cout << "Error on receive: " << error.message() << "\n";
+            stop();
+        }
+    }
+
+    void client::start_write()
+    {
+        if (stopped_)
+            return;
+
+        std::cout << "writing... " << std::endl;
+        boost::asio::async_write(socket_, boost::asio::buffer("hello\n", 6),
+            std::bind(&client::handle_write, this, _1));
+    }
+    
+    void client::handle_write(const boost::system::error_code& error)
+    {
+        if (stopped_)
+            return;
+        if (!error)
+        {
+            heartbeat_timer_.expires_after(std::chrono::seconds(1));
+            heartbeat_timer_.async_wait(std::bind(&client::start_write, this));
+        }
+        else
+        {
+            std::cout << "Error on heartbeat: " << error.message() << "\n";
+            stop();
+        }
+    }
+
+    void client::check_deadline()
+    {
+        if (stopped_)
+            return;
+        
+        if (deadline_.expiry() <= steady_timer::clock_type::now())
+        {
+            socket_.close();
+
+            deadline_.expires_at(steady_timer::time_point::max());
+        }
+
+        deadline_.async_wait(std::bind(&client::check_deadline, this));
+    }
+
 #ifdef USE_CURL
     void read_remote_csv(char* weburl, std::vector<Data> &position)
     {
