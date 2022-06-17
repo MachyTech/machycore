@@ -5,16 +5,20 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "boost/asio.hpp"
+
 #include <glad/glad.h>
 #include "GLFW/glfw3.h"
 
-#include <boost/asio.hpp>
-
+#include <chrono>
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <utility>
+
+#include <machycore.h>
+#include <machyapi.h>
 
 using boost::asio::steady_timer;
 
@@ -31,35 +35,32 @@ namespace machygl
         /* active program */
         GLuint program;
         /* uniform values */
-        float mvp[16];
-        float timedelta;
-        float time;
-        float frame;
-        GLfloat InnerColor[4];
-        GLfloat OuterColor[4];
-        GLfloat RadiusInner;
-        GLfloat RadiusOuter;
-        GLfloat resolution[2];
+        GLfloat u_rot;
+        GLfloat u_fps;
+        GLfloat u_time;
+        GLuint u_frame;
+        GLfloat u_pos[2];
+        GLfloat u_resolution[2];
         /* locations of uniforms in the proram */
-        GLuint mvp_location;
-        GLuint InnerColor_location;
-        GLuint OuterColor_location;
-        GLuint RadiusInner_location;
-        GLuint RadiusOuter_location;
+        GLuint rot_location;
+        GLuint time_location;
+        GLuint pos_location;
         GLuint resolution_location;
+        GLuint fps_location;
+        GLuint frame_location;
         /* shaders data path */
         char *vertex_path, *fragment_path;
-        /* widget ticker */
-        long first_frame_time;
-        long int first_frame;
-        long int tick;
     };
 
     class Window
     {
         public:
             GLFWwindow* window;
-            Window(std::string width, std::string height)
+#ifndef RESIZABLE
+            int width;
+            int height;
+#endif
+            Window(std::string start_width, std::string start_height)
             {
                 if (!glfwInit())
                     exit(EXIT_FAILURE);
@@ -68,7 +69,9 @@ namespace machygl
 
                 std::string::size_type sz;
 
-                window = glfwCreateWindow(std::stoi(width,&sz), std::stoi(height,&sz), "MachyTech", NULL, NULL);
+                width = std::stoi(start_width, &sz);
+                height = std::stoi(start_height, &sz);
+                window = glfwCreateWindow(width, height, "MachyTech", NULL, NULL);
 
                 if (!window)
                 {
@@ -77,6 +80,9 @@ namespace machygl
                 }
 
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+#ifndef RESIZABLE
+                glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
+#endif
                 glfwMakeContextCurrent(window);
                 gladLoadGL();
                 glfwSwapInterval(1);
@@ -89,7 +95,7 @@ namespace machygl
             }
     };
 
-    class utils
+    class scene
     {
         private:
             std::string vertex_shader_text;
@@ -100,17 +106,20 @@ namespace machygl
             const char* fs_text;
             const char* vs_text;
 
-            long frame;
+            long first_frame_time;
 
             std::vector<std::string> info;
             machygl_variables *machygl_var;
-            GLFWwindow* win_;
+            machygl::Window* win_;
+            machycore::controller_data* controller_;
             steady_timer frameticker_;
+            steady_timer shader_timer_;
         public:
-            utils(Window& win, boost::asio::io_context& io_context)
-                : win_(win.window),
+            scene(Window& win, boost::asio::io_context& io_context, machyapi::client& c)
+                : win_(&win),
                     frameticker_(io_context),
-                    frame(0),
+                    shader_timer_(io_context),
+                    controller_(c._controller),
                     machygl_var(new machygl::machygl_variables())
             {}
             GLuint vertex_shader, fragment_shader;
@@ -120,11 +129,12 @@ namespace machygl
             void realize_shader();
             void start(std::string);
             void tick();
-            void compute_mvp(float *res, float phi, float theta, float psi);
             std::string read_shader(std::string direction);
             int get_compile_data(GLuint shader);
             GLuint link_shader_old(std::string vs_direction, std::string fs_direction);
             bool link_shader(std::string ver_src, std::string frag_src);
+            void change_shader_timer_1();
+            void change_shader_timer_2();
     };
 }
 #endif

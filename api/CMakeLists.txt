@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 # name of the project
 project(machyapi VERSION 0.0.1 DESCRIPTION "machyapi functions used by machytechs projecting system")
 
-add_library(machyapi SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/api.cpp)
+add_library(machyapi SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/machyapi.cpp)
 
 set_target_properties(machyapi PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(machyapi PROPERTIES SOVERSION 0.0.1)
@@ -17,7 +17,7 @@ if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
 if (NOT TARGET nlohmann_json)
-    add_subdirectory(libs/json libs/json)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api/libs/json libs/json)
 endif()
 target_link_libraries(machyapi PRIVATE ${Boost_LIBRARIES} nlohmann_json machycore)
 

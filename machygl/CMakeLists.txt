@@ -8,11 +8,28 @@ set_target_properties(machygl PROPERTIES SOVERSION 0.0.1)
 
 target_include_directories(machygl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+find_package( Boost 1.58 REQUIRED system )
+include_directories(${Boost_INCLUDE_DIRS})
+
 if (NOT TARGET glfw)
      add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/glfw vendor/glfw)
 endif()
+if (NOT TARGET machyapi)
+   add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api libs/machycore/api)
+endif()
+if (NOT TARGET machycore)
+   add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
+endif()
+if (NOT TARGET nlohmann_json)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api/libs/json libs/json)
+endif()
 
-target_link_libraries(machygl glfw)
+target_link_libraries(machygl PRIVATE ${Boost_LIBRARIES} glfw machyapi machycore nlohmann_json)
+
+# use boost enhanced functions(?)
+if(BOOST_ENHANCED)
+   add_compile_definitions(BOOST_ENHANCED)
+endif()
 
 # ---------------------------------------------------------
 # Install

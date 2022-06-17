@@ -18,6 +18,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <mutex>
 
 using boost::asio::steady_timer;
 using boost::asio::ip::tcp;
@@ -116,15 +117,22 @@ namespace machyapi
     class client
     {
         public:
-            client(boost::asio::io_context& io_context, machycore::controller_data* controller_data)
+            client(boost::asio::io_context& io_context, std::string ip, std::string port, machycore::controller_data* controller_data)
                 : socket_(io_context),
                     deadline_(io_context),
                     heartbeat_timer_(io_context),
+                    ip_(ip),
+                    resolver_(io_context),
+                    port_(port),
                     printer_(io_context),
+                    starter_(io_context),
                     _controller(controller_data)
-            {}
+            {
+                start(resolver_.resolve(ip_, port_));
+            }
             void start(tcp::resolver::results_type);
             void stop();
+            machycore::controller_data* _controller;
         private:
             void start_connect(tcp::resolver::results_type::iterator);
             void handle_connect(const boost::system::error_code&,
@@ -135,7 +143,10 @@ namespace machyapi
             void handle_write(const boost::system::error_code& error);
             void check_deadline();
             void print();
+            void starter();
         private:
+            tcp::resolver resolver_;
+            std::string ip_, port_;
             bool stopped_ = false;
             tcp::resolver::results_type endpoints_;
             tcp::socket socket_;
@@ -143,7 +154,7 @@ namespace machyapi
             steady_timer deadline_;
             steady_timer heartbeat_timer_;
             steady_timer printer_;
-            machycore::controller_data* _controller;
+            steady_timer starter_;
     };
 }
 #endif
