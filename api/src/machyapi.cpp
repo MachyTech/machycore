@@ -4,6 +4,8 @@ namespace machyapi
 {
     void client::print()
     {
+        if (stopped_)
+            return;
         nlohmann::json json;
         if (_controller->connected)
         {
@@ -137,6 +139,9 @@ namespace machyapi
             // Empty messages are heartbeats and so ignored.
             if (!line.empty())
             {
+#ifdef DEBUG
+                std::cout<< line << "\n";
+#endif
                 nlohmann::json json = nlohmann::json::parse(line);
                 if(_controller->mtx_.try_lock())
                 {
@@ -147,7 +152,7 @@ namespace machyapi
                 }
             }
 
-            heartbeat_timer_.expires_after(std::chrono::milliseconds(10));
+            heartbeat_timer_.expires_after(std::chrono::milliseconds(1));
             heartbeat_timer_.async_wait(std::bind(&client::start_write, this));
         }
         else

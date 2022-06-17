@@ -31,7 +31,7 @@ namespace machygl
         "\n"
         "uniform vec2 u_resolution;\n"
         "uniform float u_rot;\n"
-        "uniform vec3 u_pos;\n"
+        "uniform vec2 u_pos;\n"
         "uniform float u_time;\n"
         "uniform float u_fps;\n"
         "uniform int u_frame;\n";
@@ -56,11 +56,7 @@ namespace machygl
     {        
         float previous_time = machygl_var->u_time;
 
-        auto now = std::chrono::system_clock::now();
-        auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-        auto epoch = now_ms.time_since_epoch();
-        auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
-        long current_frame_time = value.count();
+        long current_frame_time = machycore::current_time_ms();
 
         machygl_var->u_time = (current_frame_time - first_frame_time) / 1000.0;
         machygl_var->u_fps = 1 / (machygl_var->u_time - previous_time);        
@@ -96,10 +92,20 @@ namespace machygl
         if(controller_->connected)
             if (controller_->mtx_.try_lock())
             {
+#ifdef DEBUG
                 printf("{normalizedLX: %f, normalizedLY: %f, normalizedMagnitude: %f}\n", 
                     controller_->normalizedLX, controller_->normalizedLY, controller_->normalizedMagnitude);      
+#endif    
+                machycontrol::mass_no_moment(
+                    atan2(controller_->normalizedLY, controller_->normalizedLX)
+                    , controller_->normalizedMagnitude, simulation_mass);
                 controller_->mtx_.unlock();
             }
+
+        machygl_var->u_pos[0] = simulation_mass->s_x;
+        machygl_var->u_pos[1] = simulation_mass->s_y;
+        
+        printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
 
         /* update uniforms */
         if(machygl_var->rot_location != -1) 
@@ -201,7 +207,7 @@ namespace machygl
         set_image_shader(shader);
         realize();
         frameticker_.async_wait(std::bind(&scene::tick, this));
-        change_shader_timer_1();
+        change_shader_timer_2();
     }
 
     void scene::change_shader_timer_1()
@@ -216,8 +222,8 @@ namespace machygl
     {
         std::string shader = read_shader("shaders/rectangle.glsl");
         set_image_shader(shader);
-        shader_timer_.expires_after(std::chrono::milliseconds(1000));
-        shader_timer_.async_wait(std::bind(&scene::change_shader_timer_1, this));
+        shader_timer_.expires_after(std::chrono::seconds(100));
+        shader_timer_.async_wait(std::bind(&scene::change_shader_timer_2, this));
     }
 
     void scene::realize_shader()
@@ -232,6 +238,9 @@ namespace machygl
 
         /* start the new shader at time zero */
         machygl_var->u_frame = 0;
+        
+        /* create the physics object */
+        simulation_mass = new machycontrol::mass(1);
 
         machygl_var->image_shader_dirty = false;
     }

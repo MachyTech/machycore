@@ -19,6 +19,7 @@
 
 #include <machycore.h>
 #include <machyapi.h>
+#include <machycontrol.h>
 
 using boost::asio::steady_timer;
 
@@ -114,6 +115,7 @@ namespace machygl
             machycore::controller_data* controller_;
             steady_timer frameticker_;
             steady_timer shader_timer_;
+            machycontrol::mass* simulation_mass;
         public:
             scene(Window& win, boost::asio::io_context& io_context, machyapi::client& c)
                 : win_(&win),

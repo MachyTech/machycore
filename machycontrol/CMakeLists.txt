@@ -7,6 +7,12 @@ set_target_properties(machycontrol PROPERTIES SOVERSION ${PROJECT_VERSION})
 
 target_include_directories(machycontrol PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+if (NOT TARGET machycore)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
+endif()
+
+target_link_libraries(machycontrol PRIVATE machycore)
+
 # ---------------------------------------------------------
 # Install
 # ---------------------------------------------------------

@@ -50,6 +50,8 @@ namespace machycore
             }
     };
 
+    long current_time_ms();
+
     struct controller_data{
         // joystick data
         float normalizedLX;
