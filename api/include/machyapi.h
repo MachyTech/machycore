@@ -14,26 +14,43 @@
 
 #include <nlohmann/json.hpp>
 #include <machycore.h>
+#include <xcontroller.h>
 
 #include <functional>
 #include <iostream>
 #include <string>
 #include <mutex>
 
+// server types
+#define GENERIC_SERVER 0
+#define XCONTROLLER_SERVER 1
+
 using boost::asio::steady_timer;
 using boost::asio::ip::tcp;
-using std::placeholders::_1;
-using std::placeholders::_2;
 
 namespace machyapi
 {
     using boost::asio::ip::tcp;
     
+    struct data_xcontroller
+    {
+        float normalizedAngle;
+        float normalizedMagnitude;
+        // json serialization information
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(data_xcontroller, normalizedAngle, normalizedMagnitude);
+    };
+
     class session
     {
         public:
             session(boost::asio::io_service& io_service)
-		        : socket_(io_service)
+		        : socket_(io_service),
+                session_type(GENERIC_SERVER)
+            {}
+            session(boost::asio::io_service& io_service, manualcontrol::xcontroller* controller)
+                : socket_(io_service),
+                controller_(controller),
+                session_type(XCONTROLLER_SERVER)
             {}
 
             tcp::socket& socket()
@@ -43,27 +60,49 @@ namespace machyapi
 
             void start()
 	        {
-		        socket_.async_read_some(boost::asio::buffer(data_, max_length),
-			        boost::bind(&session::handle_read, this,
-			        boost::asio::placeholders::error,
-			        boost::asio::placeholders::bytes_transferred));
-	        }
-
+                socket_.async_read_some(boost::asio::buffer(data_, max_length),
+                    boost::bind(&session::handle_read, this,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred));
+            }
         private:
-            	void handle_read(const boost::system::error_code& error, size_t bytes_transferred)
+            void handle_read(const boost::system::error_code& error, size_t bytes_transferred)
+            {
+                switch (session_type)
                 {
-                    if(!error)
-                    {
-                        boost::asio::async_write(socket_,
-                        boost::asio::buffer(data_, max_length),
-                        boost::bind(&session::handle_write, this,
-                            boost::asio::placeholders::error));
-                    }
-                    else
-                    {
-                        delete this;
-                    }
+                    case GENERIC_SERVER :
+                        if(!error)
+                        {
+                            boost::asio::async_write(socket_,
+                            boost::asio::buffer(data_, max_length),
+                            boost::bind(&session::handle_write, this,
+                                boost::asio::placeholders::error));
+                        }
+                        else
+                        {
+                            delete this;
+                        }
+                    case XCONTROLLER_SERVER :
+                        if (!error && controller_->getConnected() != 0)
+                        { 
+                            machyapi::data_xcontroller* c_data = new machyapi::data_xcontroller;
+
+                            c_data->normalizedAngle = controller_->getAngle();
+                            c_data->normalizedMagnitude = controller_->getMagnitude();
+                            
+                            nlohmann::json json = *c_data;
+                            std::string json_as_string = json.dump() + "\n";
+                            boost::asio::async_write(socket_,
+                                boost::asio::buffer(json_as_string.c_str(), json_as_string.length()),
+                                boost::bind(&session::handle_write, this,
+                                    boost::asio::placeholders::error));
+                        }
+                        else
+                        {
+                            delete this;
+                        }
                 }
+            }
 
             void handle_write(const boost::system::error_code& error)
             {
@@ -79,6 +118,8 @@ namespace machyapi
             tcp::socket socket_;
 	        enum { max_length = 1024 };
 	        char data_[max_length];
+            manualcontrol::xcontroller* controller_;
+            int session_type;
     };
 
     class server
@@ -86,6 +127,15 @@ namespace machyapi
     public:
         server(boost::asio::io_service& io_service, short port)
             :io_service_(io_service),
+            server_type(GENERIC_SERVER),
+            acceptor_(io_service, tcp::endpoint(tcp::v4(), port))
+        {
+            start_accept();
+        }
+        server(boost::asio::io_service& io_service, short port, manualcontrol::xcontroller* controller)
+            :io_service_(io_service),
+            server_type(XCONTROLLER_SERVER),
+            controller_(controller),
             acceptor_(io_service, tcp::endpoint(tcp::v4(), port))
         {
             start_accept();
@@ -93,8 +143,14 @@ namespace machyapi
     private:
         void start_accept()
         {
-            session* new_session = new session(io_service_);
-
+            session* new_session;
+            switch(server_type)
+            {
+                case GENERIC_SERVER:
+                    new_session = new session(io_service_);
+                case XCONTROLLER_SERVER:
+                    new_session = new session(io_service_, controller_);
+            }
             acceptor_.async_accept(new_session->socket(),
                 boost::bind(&server::handle_accept, this, 
                     new_session, boost::asio::placeholders::error));
@@ -110,6 +166,8 @@ namespace machyapi
             start_accept();
         }
 
+        int server_type;
+        manualcontrol::xcontroller* controller_;
         boost::asio::io_service& io_service_;
         tcp::acceptor acceptor_;
     };

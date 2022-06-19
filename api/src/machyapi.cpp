@@ -56,15 +56,15 @@ namespace machyapi
     {
         if (endpoint_iter != endpoints_.end())
         {
-        std::cout << "Trying " << endpoint_iter->endpoint() << "...\n";
+            std::cout << "Trying " << endpoint_iter->endpoint() << "...\n";
 
-        // Set a deadline for the connect operation.
-        deadline_.expires_after(std::chrono::seconds(2));
+            // Set a deadline for the connect operation.
+            deadline_.expires_after(std::chrono::seconds(2));
 
-        // Start the asynchronous connect operation.
-        socket_.async_connect(endpoint_iter->endpoint(),
-            std::bind(&client::handle_connect,
-                this, _1, endpoint_iter));
+            // Start the asynchronous connect operation.
+            socket_.async_connect(endpoint_iter->endpoint(),
+                std::bind(&client::handle_connect,
+                    this, std::placeholders::_1, endpoint_iter));
         }
         else
         {
@@ -77,30 +77,30 @@ namespace machyapi
         tcp::resolver::results_type::iterator endpoint_iter)
     {
         if (stopped_)
-        return;
+            return;
 
         // The async_connect() function automatically opens the socket at the start
         // of the asynchronous operation. If the socket is closed at this time then
         // the timeout handler must have run first.
         if (!socket_.is_open())
         {
-        std::cout << "Connect timed out\n";
+            std::cout << "Connect timed out\n";
 
-        // Try the next available endpoint.
-        start_connect(++endpoint_iter);
+            // Try the next available endpoint.
+            start_connect(++endpoint_iter);
         }
 
         // Check if the connect operation failed before the deadline expired.
         else if (error)
         {
-        std::cout << "Connect error: " << error.message() << "\n";
+            std::cout << "Connect error: " << error.message() << "\n";
 
-        // We need to close the socket used in the previous connection attempt
-        // before starting a new one.
-        socket_.close();
+            // We need to close the socket used in the previous connection attempt
+            // before starting a new one.
+            socket_.close();
 
-        // Try the next available endpoint.
-        start_connect(++endpoint_iter);
+            // Try the next available endpoint.
+            start_connect(++endpoint_iter);
         }
 
         // Otherwise we have successfully established a connection.
@@ -122,7 +122,7 @@ namespace machyapi
         // Start an asynchronous operation to read a newline-delimited message.
         boost::asio::async_read_until(socket_,
             boost::asio::dynamic_buffer(input_buffer_), '\n',
-            std::bind(&client::handle_read, this, _1, _2));
+            std::bind(&client::handle_read, this, std::placeholders::_1, std::placeholders::_2));
     }
 
     void client::handle_read(const boost::system::error_code& error, std::size_t n)
@@ -166,11 +166,11 @@ namespace machyapi
     void client::start_write()
     {
         if (stopped_)
-        return;
+            return;
 
         // Start an asynchronous operation to send a heartbeat message.
         boost::asio::async_write(socket_, boost::asio::buffer("\n", 1),
-            std::bind(&client::handle_write, this, _1));
+            std::bind(&client::handle_write, this, std::placeholders::_1));
     }
 
     void client::handle_write(const boost::system::error_code& error)
@@ -180,35 +180,34 @@ namespace machyapi
 
         if (!error)
         {
-            // Wait 10 seconds before sending the next heartbeat.
             start_read();
         }
         else
         {
-        std::cout << "Error on heartbeat: " << error.message() << "\n";
+            std::cout << "Error on write " << error.message() << "\n";
 
-        stop();
+            stop();
         }
     }
 
     void client::check_deadline()
     {
         if (stopped_)
-        return;
+            return;
 
         // Check whether the deadline has passed. We compare the deadline against
         // the current time since a new asynchronous operation may have moved the
         // deadline before this actor had a chance to run.
         if (deadline_.expiry() <= steady_timer::clock_type::now())
         {
-        // The deadline has passed. The socket is closed so that any outstanding
-        // asynchronous operations are cancelled.
-        socket_.close();
+            // The deadline has passed. The socket is closed so that any outstanding
+            // asynchronous operations are cancelled.
+            socket_.close();
 
-        // There is no longer an active deadline. The expiry is set to the
-        // maximum time point so that the actor takes no action until a new
-        // deadline is set.
-        deadline_.expires_at(steady_timer::time_point::max());
+            // There is no longer an active deadline. The expiry is set to the
+            // maximum time point so that the actor takes no action until a new
+            // deadline is set.
+            deadline_.expires_at(steady_timer::time_point::max());
         }
 
         // Put the actor back to sleep.

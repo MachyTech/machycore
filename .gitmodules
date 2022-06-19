@@ -1,3 +1,6 @@
 [submodule "api/libs/json"]
 	path = api/libs/json
 	url = https://github.com/nlohmann/json.git
+[submodule "machycore/libs/boost-cmake"]
+	path = machycore/libs/boost-cmake
+	url = https://github.com/Orphis/boost-cmake.git
