@@ -20,6 +20,14 @@ int main(int argc, char* argv[])
     return 0;
 }
 ```
+
+These libraries can be include with cmake like this:
+```
+if (NOT TARGET manualcontrol)
+    add_subdirectory(libs/machycore/manualcontrol)
+endif()
+target_link_libraries(lib_using_machycore PRIVATE machyapi )
+```
 ## machyapi
 
 The machyapi includes servers and clients that can be used to share information. Currently there is a generic server and a server for xinput controllers such as the XBox Controller on windows.
