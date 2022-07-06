@@ -8,11 +8,8 @@ set_target_properties(machygl PROPERTIES SOVERSION 0.0.1)
 
 target_include_directories(machygl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-find_package( Boost 1.58 REQUIRED system )
-include_directories(${Boost_INCLUDE_DIRS})
-
 if (NOT TARGET glfw)
-     add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/glfw vendor/glfw)
+     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/vendor/glfw vendor/glfw)
 endif()
 if (NOT TARGET machyapi)
    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api libs/machycore/api)
@@ -27,12 +24,19 @@ if (NOT TARGET nlohmann_json)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api/libs/json libs/json)
 endif()
 
-target_link_libraries(machygl PRIVATE ${Boost_LIBRARIES} glfw machyapi machycore nlohmann_json machycontrol)
+file(GLOB SOURCES "src/glad.cpp")
+ADD_LIBRARY(LibsModule ${SOURCES})
+target_link_libraries(LibsModule Boost::boost)
+target_link_libraries(LibsModule -lpthread)
+target_link_libraries(LibsModule -lXrandr)
+target_link_libraries(LibsModule glfw)
+target_link_libraries(LibsModule machygl)
+target_link_libraries(LibsModule nlohmann_json)
+target_link_libraries(LibsModule machycore)
+target_link_libraries(LibsModule machyapi)
+target_link_libraries(LibsModule machycontrol)
 
-# use boost enhanced functions(?)
-if(BOOST_ENHANCED)
-   add_compile_definitions(BOOST_ENHANCED)
-endif()
+target_link_libraries(machygl PRIVATE LibsModule)
 
 # ---------------------------------------------------------
 # Install

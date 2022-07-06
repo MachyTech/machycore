@@ -9,13 +9,14 @@ set_target_properties(manualcontrol PROPERTIES SOVERSION 0.0.1)
 
 target_include_directories(manualcontrol PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(manualcontrol PUBLIC Boost::boost XInput)
-
 if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
-if (NOT TARGET manualcontrol)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/manualcontrol libs/machycore/manualcontrol)
+if (WIN32)
+    target_link_libraries(manualcontrol PUBLIC Boost::boost XInput machycore)
+endif (WIN32)
+if (UNIX)
+    target_link_libraries(manualcontrol PUBLIC Boost::boost machycore)
 endif()
 # ---------------------------------------------------------
 # Install

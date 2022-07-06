@@ -8,7 +8,7 @@ add_library(machycore STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/machycore.cpp)
 set_target_properties(machycore PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(machycore PROPERTIES SOVERSION 0.0.1)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/manualcontrol/libs/boost-cmake libs/manualcontrol/boost-cmake)
+add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore/libs/boost-cmake libs/machycore/boost-cmake)
 
 target_include_directories(machycore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

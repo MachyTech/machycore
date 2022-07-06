@@ -28,6 +28,10 @@ if (NOT TARGET manualcontrol)
 endif()
 target_link_libraries(lib_using_machycore PRIVATE machyapi )
 ```
+You can initiate the git submodules using:
+```
+git submodule update --init --recursive
+```
 ## machyapi
 
 The machyapi includes servers and clients that can be used to share information. Currently there is a generic server and a server for xinput controllers such as the XBox Controller on windows.
@@ -44,7 +48,20 @@ Machycontrol includes filters, physics and other mathematical algorithms.
 
 ## machycore
 
-MachyCore includes a few pieces of code that are needed by all library's and makes sure that everything is bundled together with cmake.
+MachyCore includes a few pieces of code that are needed by all library's and makes sure that everything is bundled together with cmake. You could use the environment as follows:
+
+```
+    std::vector<machycore::Variables*> *variables;
+    
+    void create_env(machycore::Environment *env){
+        env->appendVariable( new machycore::StdEnvVariable("GLSL_APP_FRAG", "shaders/rectangle.glsl"));
+    }
+    
+    // then use the environment like this
+    machycore::Environment *env = new machycore::Environment();
+    create_env(env);
+    env->print();
+```
 
 ## machygl
 

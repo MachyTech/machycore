@@ -54,8 +54,7 @@ namespace machycore
 
     struct controller_data{
         // joystick data
-        float normalizedLX;
-        float normalizedLY;
+        float normalizedAngle;
         float normalizedMagnitude;
         // connection
         std::atomic<bool> connected;

@@ -4,3 +4,6 @@
 [submodule "machycore/libs/boost-cmake"]
 	path = machycore/libs/boost-cmake
 	url = https://github.com/Orphis/boost-cmake.git
+[submodule "vendor/glfw"]
+	path = vendor/glfw
+	url = https://github.com/glfw/glfw.git

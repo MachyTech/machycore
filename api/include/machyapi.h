@@ -47,12 +47,13 @@ namespace machyapi
 		        : socket_(io_service),
                 session_type(GENERIC_SERVER)
             {}
+#ifdef _WIN32
             session(boost::asio::io_service& io_service, manualcontrol::xcontroller* controller)
                 : socket_(io_service),
                 controller_(controller),
                 session_type(XCONTROLLER_SERVER)
             {}
-
+#endif
             tcp::socket& socket()
             {
                 return socket_;
@@ -82,6 +83,7 @@ namespace machyapi
                         {
                             delete this;
                         }
+#ifdef _WIN32
                     case XCONTROLLER_SERVER :
                         if (!error && controller_->getConnected() != 0)
                         { 
@@ -101,6 +103,7 @@ namespace machyapi
                         {
                             delete this;
                         }
+#endif
                 }
             }
 
@@ -118,7 +121,9 @@ namespace machyapi
             tcp::socket socket_;
 	        enum { max_length = 1024 };
 	        char data_[max_length];
+#ifdef _WIN32
             manualcontrol::xcontroller* controller_;
+#endif
             int session_type;
     };
 
@@ -132,6 +137,7 @@ namespace machyapi
         {
             start_accept();
         }
+#ifdef _WIN32
         server(boost::asio::io_service& io_service, short port, manualcontrol::xcontroller* controller)
             :io_service_(io_service),
             server_type(XCONTROLLER_SERVER),
@@ -140,6 +146,7 @@ namespace machyapi
         {
             start_accept();
         }
+#endif
     private:
         void start_accept()
         {
@@ -148,8 +155,10 @@ namespace machyapi
             {
                 case GENERIC_SERVER:
                     new_session = new session(io_service_);
+#ifdef _WIN32
                 case XCONTROLLER_SERVER:
                     new_session = new session(io_service_, controller_);
+#endif
             }
             acceptor_.async_accept(new_session->socket(),
                 boost::bind(&server::handle_accept, this, 
@@ -167,7 +176,9 @@ namespace machyapi
         }
 
         int server_type;
+#ifdef _WIN32
         manualcontrol::xcontroller* controller_;
+#endif
         boost::asio::io_service& io_service_;
         tcp::acceptor acceptor_;
     };

@@ -10,8 +10,7 @@ namespace machyapi
         if (_controller->connected)
         {
             _controller->mtx_.lock();
-            json["normalizedLX"] = _controller->normalizedLX;
-            json["normalizedLY"] = _controller->normalizedLY;
+            json["normalizedAngle"] = _controller->normalizedAngle;
             json["normalizedMagnitude"] = _controller->normalizedMagnitude;
             _controller->mtx_.unlock();
             std::cout<<"controller: " << json << std::endl;
@@ -139,17 +138,22 @@ namespace machyapi
             // Empty messages are heartbeats and so ignored.
             if (!line.empty())
             {
-#ifdef DEBUG
+#ifdef DEBUG1
                 std::cout<< line << "\n";
 #endif
                 nlohmann::json json = nlohmann::json::parse(line);
                 if(_controller->mtx_.try_lock())
                 {
-                    _controller->normalizedLX = json["normalizedLX"];
-                    _controller->normalizedLY = json["normalizedLY"];
+                    _controller->normalizedAngle = json["normalizedAngle"];
                     _controller->normalizedMagnitude = json["normalizedMagnitude"];
                     _controller->mtx_.unlock();
                 }
+#ifdef DEBUG2
+                else
+                {
+                    std::cout << "failed to acquire the mutex" << std::endl;
+                }
+#endif
             }
 
             heartbeat_timer_.expires_after(std::chrono::milliseconds(1));

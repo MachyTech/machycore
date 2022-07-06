@@ -1,7 +1,5 @@
 #include "machygl.h"
 
-#define SHOW_FPS
-
 namespace machygl
 {
     std::string machygraph_vertex_shader = 
@@ -92,21 +90,21 @@ namespace machygl
         if(controller_->connected)
             if (controller_->mtx_.try_lock())
             {
-#ifdef DEBUG
-                printf("{normalizedLX: %f, normalizedLY: %f, normalizedMagnitude: %f}\n", 
-                    controller_->normalizedLX, controller_->normalizedLY, controller_->normalizedMagnitude);      
+#ifdef DEBUG3
+                printf("{normalizedAngle: %f, normalizedMagnitude: %f}\n", 
+                    controller_->normalizedAngle, controller_->normalizedMagnitude);      
 #endif    
                 machycontrol::mass_no_moment(
-                    atan2(controller_->normalizedLY, controller_->normalizedLX)
-                    , controller_->normalizedMagnitude, simulation_mass);
+                    controller_->normalizedAngle, controller_->normalizedMagnitude, 
+                    simulation_mass);
                 controller_->mtx_.unlock();
             }
 
         machygl_var->u_pos[0] = simulation_mass->s_x;
         machygl_var->u_pos[1] = simulation_mass->s_y;
-        
+#ifdef DEBUG4        
         printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
-
+#endif
         /* update uniforms */
         if(machygl_var->rot_location != -1) 
             glUniform1f (machygl_var->rot_location, machygl_var->u_rot);
@@ -222,7 +220,7 @@ namespace machygl
     {
         std::string shader = read_shader("shaders/rectangle.glsl");
         set_image_shader(shader);
-        shader_timer_.expires_after(std::chrono::seconds(100));
+        shader_timer_.expires_after(std::chrono::seconds(10));
         shader_timer_.async_wait(std::bind(&scene::change_shader_timer_2, this));
     }
 

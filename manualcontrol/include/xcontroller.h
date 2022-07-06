@@ -1,5 +1,5 @@
-#ifndef _MACHY_GL_H_
-#define _MACHY_GL_H_
+#ifndef _XCONTROLLER_H_
+#define _XCONTROLLER_H_
 
 #ifdef _WIN32
     #ifndef WIN32_LEAN_AND_MEAN
@@ -26,7 +26,7 @@
 
 namespace manualcontrol
 {
-    struct controller_data {
+    struct xcontroller_data {
 		// stored and filtered values
 		float normalizedLX;
 		float normalizedLY;
@@ -48,13 +48,13 @@ namespace manualcontrol
             XINPUT_STATE _controllerState;
             int _controllerNum;
             bool IsConnected();
-            struct controller_data* controller_;
+            struct xcontroller_data* controller_;
 		    XINPUT_STATE GetState();
         public:
         	xcontroller(boost::asio::io_context& io_context, int playernumber) :
 			    _controllerNum(playernumber - 1),
 			    vibration_val(32767),
-			    controller_(new controller_data),
+			    controller_(new xcontroller_data),
 			    connecter_(io_context)
 		    {
 			    std::thread* xcontroller_thread = new std::thread( &xcontroller::xcontroller_main, this );
