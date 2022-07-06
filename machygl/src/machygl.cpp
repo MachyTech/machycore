@@ -87,24 +87,32 @@ namespace machygl
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUseProgram(machygl_var->program);
-        if(controller_->connected)
-            if (controller_->mtx_.try_lock())
-            {
+        switch (simulator_scenario)
+        {
+            case NO_SIM:
+                /* nothing */
+                break;
+            case MASS_NO_MOMENT:
+                if(controller_->connected)
+                    if (controller_->mtx_.try_lock())
+                        {
 #ifdef DEBUG3
-                printf("{normalizedAngle: %f, normalizedMagnitude: %f}\n", 
-                    controller_->normalizedAngle, controller_->normalizedMagnitude);      
+                            printf("{normalizedAngle: %f, normalizedMagnitude: %f}\n", 
+                            controller_->normalizedAngle, controller_->normalizedMagnitude);      
 #endif    
-                machycontrol::mass_no_moment(
-                    controller_->normalizedAngle, controller_->normalizedMagnitude, 
-                    simulation_mass);
-                controller_->mtx_.unlock();
-            }
-
-        machygl_var->u_pos[0] = simulation_mass->s_x;
-        machygl_var->u_pos[1] = simulation_mass->s_y;
+                            machycontrol::mass_no_moment(
+                            controller_->normalizedAngle, controller_->normalizedMagnitude, 
+                            simulation_mass);
+                            controller_->mtx_.unlock();
+                        }
+                    machygl_var->u_pos[0] = simulation_mass->s_x;
+                    machygl_var->u_pos[1] = simulation_mass->s_y;
 #ifdef DEBUG4        
-        printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
+                    printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
 #endif
+                    break;
+        }
+
         /* update uniforms */
         if(machygl_var->rot_location != -1) 
             glUniform1f (machygl_var->rot_location, machygl_var->u_rot);

@@ -21,6 +21,9 @@
 #include <machyapi.h>
 #include <machycontrol.h>
 
+#define MASS_NO_MOMENT 0
+#define NO_SIM 1
+
 using boost::asio::steady_timer;
 
 namespace machygl
@@ -109,6 +112,7 @@ namespace machygl
 
             long first_frame_time;
 
+            int simulator_scenario;
             std::vector<std::string> info;
             machygl_variables *machygl_var;
             machygl::Window* win_;
@@ -122,6 +126,14 @@ namespace machygl
                     frameticker_(io_context),
                     shader_timer_(io_context),
                     controller_(c._controller),
+                    simulator_scenario(MASS_NO_MOMENT),
+                    machygl_var(new machygl::machygl_variables())
+            {}
+            scene(Window&win, boost::asio::io_context& io_context)
+                : win_(&win),
+                    frameticker_(io_context),
+                    shader_timer_(io_context),
+                    simulator_scenario(NO_SIM),
                     machygl_var(new machygl::machygl_variables())
             {}
             GLuint vertex_shader, fragment_shader;
