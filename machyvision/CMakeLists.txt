@@ -16,7 +16,7 @@ if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
 
-target_link_libraries(machyvision PRIVATE machycore ${OpenCV_LIBS})
+target_link_libraries(machyvision PRIVATE Boost::boost machycore ${OpenCV_LIBS})
 
 # ---------------------------------------------------------
 # Install

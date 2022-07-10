@@ -33,7 +33,7 @@ namespace manualcontrol
 		float normalizedMagnitude;
 #if (__cplusplus >= 201703L)
 		// semaphore
-		std::counting_semaphore<MAX_SEM_COUNT> _smph{ MAX_SEM_COUNT };
+		//std::counting_semaphore<MAX_SEM_COUNT> _smph{ MAX_SEM_COUNT };
 #endif //C++20
 		// mutex
 		std::mutex mtx_;

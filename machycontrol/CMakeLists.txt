@@ -11,7 +11,7 @@ if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
 
-target_link_libraries(machycontrol PRIVATE machycore)
+target_link_libraries(machycontrol PRIVATE Boost::boost machycore)
 
 # ---------------------------------------------------------
 # Install
