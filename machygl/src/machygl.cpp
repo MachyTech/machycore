@@ -84,9 +84,9 @@ namespace machygl
             first_frame_time = current_frame_time;
 
         machygl_var->u_frame++;
-#ifdef SHOW_FPS
+
         printf("elapsed time: %f, elapsed frames: %d, fps: %f\n", machygl_var->u_time, machygl_var->u_frame, machygl_var->u_fps);
-#endif
+
         render();
     }
 
@@ -121,6 +121,7 @@ namespace machygl
 #ifdef DEBUG_MASSA        
                     printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
 #endif
+
                     break;
             case RAW_CAMERA_OUTPUT:
                 texture_->mtx_.lock();

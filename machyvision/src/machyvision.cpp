@@ -4,11 +4,9 @@ namespace machyvision
 {
     unsigned char* cvMat2TexInput(cv::Mat& img)
     {
-        cv::Mat img_out_1;
-        cv::cvtColor(img, img_out_1, cv::COLOR_BGR2RGB);
-        cv::Mat img_out_2;
-        cv::flip(img_out_1, img_out_2, 0);
-        return img_out_2.data;
+        cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+        cv::flip(img, img, 0);
+        return img.data;
     }
 
 

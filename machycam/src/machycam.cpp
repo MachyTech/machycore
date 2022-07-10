@@ -1,37 +1,89 @@
 #include "machycam.h"
 
 namespace machycam{
-    /*
-    void cam_session::show()
+    void cam_session::capture_x11image(std::vector<uint8_t>& Pixels, int& width, int& height, int& BitsPerPixel)
     {
-        boost::asio::post(pool_,
-        [this]()
-        {
-            for(;;)
-            {
-                if(cam_->connected!=0)
-                {
-                    std::ostringstream buf;
-                    if(cam_->mtx_.try_lock())
-                    { 
-                        if (cam_->frame.empty())
-                        {
-                            std::cout << "Finished reading: empty frame\n";
-                            cam_->connected = 0;
-                            cam_->mtx_.unlock();
-                            break;
-                        }
-                        buf << "FPS: " << std::fixed << std::setprecision(1) << (cv::getTickFrequency() / (double) cam_->fps);
-                        cv::putText(cam_->frame, buf.str(), cv::Point(10, 30), cv::FONT_HERSHEY_PLAIN, 2.0, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-                        cv::imshow("Video", cam_->frame);
-                        cv::waitKey(1);
-                    }
-                    cam_->mtx_.unlock();
-                }
-            }
-        });
+        Display* display = XOpenDisplay(nullptr);
+        Window root = DefaultRootWindow(display);
+        
+        XWindowAttributes attributes = {0};
+        XGetWindowAttributes(display, root, &attributes);
+
+        width = 400;
+        height = 400;
+
+        XImage* img = XGetImage(display, root, 0, 0, width, height, AllPlanes, ZPixmap);
+        BitsPerPixel = img->bits_per_pixel;
+        Pixels.resize(width * height, 4);
+
+        memcpy(&Pixels[0], img->data, Pixels.size());
+
+        XDestroyImage(img);
+        XCloseDisplay(display);
     }
-    */
+
+    void cam_session::start_screencapture()
+    {
+        int width = 0;
+        int height = 0;
+        int Bpp = 0;
+        std::vector<std::uint8_t> Pixels;
+        
+        Display* display = XOpenDisplay(nullptr);
+        Window root = DefaultRootWindow(display);
+    
+
+        capture_x11image(Pixels, width, height, Bpp);
+
+        if (width && height)
+        {
+            cam_->connected = 1;
+            int64 t = cv::getTickCount ();
+
+            cv::Mat img = cv::Mat(height, width, Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]);
+
+            cam_->mtx_.lock();
+            img.copyTo(cam_->frame);
+            cam_->fps = cv::getTickCount()-t;
+            cam_->mtx_.unlock();
+
+            texture_->mtx_.lock();
+            texture_->width = img.cols;
+            texture_->height = img.rows;
+            texture_->image = img.data;
+            if(texture_->dirty){texture_->dirty = false;};
+            texture_->mtx_.unlock();                
+        }
+    }
+
+    void cam_session::start_screencapture_new()
+    {
+        machycam::screenshot screen(0, 0, 400, 400);
+        cv::Mat img;
+
+        while(1)
+        {
+            int64 t = cv::getTickCount ();
+
+            screen.run(img);
+        
+            cam_->mtx_.lock();
+            img.copyTo(cam_->frame);
+            cam_->fps = cv::getTickCount()-t;
+            cam_->mtx_.unlock();
+
+            texture_->mtx_.lock();
+            texture_->width = img.cols;
+            texture_->height = img.rows;
+            texture_->image = machyvision::cvMat2TexInput(img);
+            if(texture_->dirty){texture_->dirty = false;};
+            texture_->mtx_.unlock();
+
+            t = cv::getTickCount() - t;
+            //printf(" FPS: %f\n", cv::getTickFrequency() / (double) t);
+        }
+    }
+
     void cam_session::read_image()
     {
         cv::Mat img;
@@ -77,11 +129,13 @@ namespace machycam{
             cam_->mtx_.unlock();
 
             /* lock the texture struct and copy the image in bytes */
-            texture_->mtx_.lock();
-            texture_->width = local_frame.cols;
-            texture_->height = local_frame.rows;
-            texture_->image = machyvision::cvMat2TexInput(local_frame);
-            texture_->mtx_.unlock();
+            if(texture_->mtx_.try_lock())
+            {
+                texture_->width = local_frame.cols;
+                texture_->height = local_frame.rows;
+                texture_->image = machyvision::cvMat2TexInput(local_frame);
+                texture_->mtx_.unlock();
+            }
         }
     }
 
