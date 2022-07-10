@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 project(machycontrol VERSION 0.0.1 DESCRIPTION "control functions written by machytech")
 add_library(machycontrol STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/machycontrol.cpp)

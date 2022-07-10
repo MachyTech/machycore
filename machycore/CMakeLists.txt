@@ -10,7 +10,13 @@ set_target_properties(machycore PROPERTIES SOVERSION 0.0.1)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore/libs/boost-cmake libs/machycore/boost-cmake)
 
-target_include_directories(machycore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+find_package( OpenCV REQUIRED )
+target_include_directories(machycore PUBLIC 
+                ${CMAKE_CURRENT_SOURCE_DIR}/include
+                ${OpenCV_INCLUDE_DIRS}
+)
+
+target_link_libraries(machycore PRIVATE ${OpenCV_LIBS})
 
 # header files
 # ---------------------------------------------------------

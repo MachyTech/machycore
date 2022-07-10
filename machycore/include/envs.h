@@ -19,6 +19,7 @@
 #define LINEWIDTH 10
 #define WINDOW_WIDTH 11
 #define WINDOW_HEIGHT 12
+#define MAX_THREADS 13
 
 namespace machycore
 {

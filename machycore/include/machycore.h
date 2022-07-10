@@ -8,6 +8,7 @@
 #include <iostream>
 #include <atomic>
 #include "envs.h"
+#include <opencv4/opencv2/opencv.hpp>
 
 namespace machycore
 {   
@@ -59,6 +60,31 @@ namespace machycore
         // connection
         std::atomic<bool> connected;
         // mutex
+        std::mutex mtx_;
+    };
+
+    struct texture_data{
+        /* width and height of texture in pixels */
+        int width, height;
+        /* image in bytes */
+        unsigned char* image;
+        /* clean */
+        int dirty;
+        /* mutex for thread safe usage */
+        std::mutex mtx_;
+        /* constructor */
+        texture_data() : dirty(true){}
+    };
+
+    struct camera_data{
+        /* opencv frame for convenience in other algorithms */
+        cv::Mat frame;
+        int width, height, type;
+        /* fps of video capture */
+        int64 fps;
+        /* is the camera connected */
+        std::atomic<bool> connected;
+        /* mutex for threadsafe usage */
         std::mutex mtx_;
     };
 }
