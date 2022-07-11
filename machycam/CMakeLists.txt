@@ -18,11 +18,14 @@ target_include_directories(machycam PUBLIC
 if (NOT TARGET machycore)
    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
+if (NOT TARGET dark)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machyvision/libs/darknet/ libs/darknet/)
+endif()
 if (NOT TARGET machyvision)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machyvision libs/machycore/machyvision)
 endif()
 
-target_link_libraries(machycam PRIVATE Boost::boost -lX11 machycore machyvision ${OpenCV_LIBS})
+target_link_libraries(machycam PRIVATE dark Boost::boost -lX11 machycore machyvision ${OpenCV_LIBS})
 
 # ---------------------------------------------------------
 # Install

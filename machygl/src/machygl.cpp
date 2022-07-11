@@ -85,7 +85,7 @@ namespace machygl
 
         machygl_var->u_frame++;
 
-        printf("elapsed time: %f, elapsed frames: %d, fps: %f\n", machygl_var->u_time, machygl_var->u_frame, machygl_var->u_fps);
+        //printf("elapsed time: %f, elapsed frames: %d, fps: %f\n", machygl_var->u_time, machygl_var->u_frame, machygl_var->u_fps);
 
         render();
     }

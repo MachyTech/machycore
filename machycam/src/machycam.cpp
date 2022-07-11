@@ -58,7 +58,11 @@ namespace machycam{
 
     void cam_session::start_screencapture_new()
     {
-        machycam::screenshot screen(0, 0, 400, 400);
+        int width = 800;
+        int height = 600;
+        int x = 0;
+        int y = 0;
+        machycam::screenshot screen(0, 0, width, height);
         cv::Mat img;
 
         while(1)
@@ -69,18 +73,18 @@ namespace machycam{
         
             cam_->mtx_.lock();
             img.copyTo(cam_->frame);
+            cv::cvtColor(img, cam_->frame, cv::COLOR_RGBA2RGB);
             cam_->fps = cv::getTickCount()-t;
             cam_->mtx_.unlock();
 
             texture_->mtx_.lock();
-            texture_->width = img.cols;
-            texture_->height = img.rows;
+            texture_->width = 800;
+            texture_->height = 600;
             texture_->image = machyvision::cvMat2TexInput(img);
-            if(texture_->dirty){texture_->dirty = false;};
+            if(texture_->dirty=true){texture_->dirty = false;};
             texture_->mtx_.unlock();
 
             t = cv::getTickCount() - t;
-            //printf(" FPS: %f\n", cv::getTickFrequency() / (double) t);
         }
     }
 

@@ -4,3 +4,6 @@
 [submodule "vendor/glfw"]
 	path = vendor/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "machyvision/libs/darknet"]
+	path = machyvision/libs/darknet
+	url = https://github.com/AlexeyAB/darknet.git

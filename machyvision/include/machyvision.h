@@ -5,23 +5,26 @@
 #include <iomanip>
 #include <mutex>
 #include <iostream>
+#include <vector>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/io_context.hpp>
 
+#include "yolo_v2_class.hpp"
+
 #include "machycore.h"
 
 namespace machyvision
 {
     unsigned char* cvMat2TexInput(cv::Mat& img);
-    class Detector
+    class hogDetector
     {
         enum Mode { Default, Daimler } m;
         cv::HOGDescriptor hog, hog_d;
         public:
-            Detector(boost::asio::io_context& io_context,
+            hogDetector(boost::asio::io_context& io_context,
                     boost::asio::thread_pool& pool,
                     machycore::texture_data* texture,
                     machycore::camera_data* cam) 
@@ -50,6 +53,28 @@ namespace machyvision
                 r.y += cvRound(r.height*0.07);
                 r.height = cvRound(r.height*0.8);
             }
+            void detect();
+        private:
+            boost::asio::io_context& io_context_;
+            boost::asio::thread_pool& pool_;
+            machycore::camera_data* cam_;
+            machycore::texture_data* texture_;
+    };
+
+    class YOLO
+    {
+        public:
+            YOLO(boost::asio::io_context& io_context,
+                boost::asio::thread_pool& pool,
+                machycore::texture_data* texture,
+                machycore::camera_data* cam):
+            pool_(pool),
+            io_context_(io_context),
+            texture_(texture),
+            cam_(cam)
+            {
+                boost::asio::post(pool_, [this]() {detect();});
+            } 
             void detect();
         private:
             boost::asio::io_context& io_context_;

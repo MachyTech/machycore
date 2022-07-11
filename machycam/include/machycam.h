@@ -48,7 +48,13 @@ namespace machycam
             if(img != nullptr)
                 XDestroyImage(img);
             img = XGetImage(display, root, x, y, width, height, AllPlanes, ZPixmap);
-            cvImg = cv::Mat(height, width, CV_8UC4, img->data);
+            if(width && height)
+                cvImg = cv::Mat(height, width, CV_8UC4, img->data);
+            else
+            {
+                printf("problem in capturing screen with xgetimage\n");
+                exit(-1);
+            }
         }
 
         ~screenshot()

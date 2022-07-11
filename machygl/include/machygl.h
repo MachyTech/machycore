@@ -20,7 +20,6 @@
 #include <machycore.h>
 #include <machyapi.h>
 #include <machycontrol.h>
-#include <machyvision.h>
 
 #define MAX_NO_WINDOWS 2
 

@@ -10,19 +10,19 @@ namespace machyvision
     }
 
 
-    void Detector::detect()
+    void hogDetector::detect()
     {
         toggleMode();
         toggleMode();
+        
+        cv::Mat local_frame;
+
         for(;;)
         {
             int64 t = cv::getTickCount();
             /* copy frame locally to save time in critical section */
-            cv::Mat local_frame;
-            cv::Mat preview_frame;
             cam_->mtx_.lock();
             cam_->frame.copyTo(local_frame);
-            cam_->frame.copyTo(preview_frame);
             cam_->mtx_.unlock();
             
             std::vector<cv::Rect> found = hog_result(local_frame);  
@@ -30,16 +30,16 @@ namespace machyvision
             for (std::vector<cv::Rect>::iterator i = found.begin(); i != found.end(); ++i)
             {
                 cv::Rect &r = *i;
-                Detector::adjustRect(r);
+                hogDetector::adjustRect(r);
                 rectangle(local_frame, r.tl(), r.br(), cv::Scalar(0, 255, 0), 2);
             }
 
-            cv::flip(preview_frame, preview_frame, 0);
-            cv::cvtColor(preview_frame, preview_frame, cv::COLOR_BGR2RGB);
-
-            texture_->mtx_.lock()   ;
-            texture_->height = preview_frame.rows;
-            texture_->width = preview_frame.cols;
+            //cv::flip(local_frame, local_frame, 0);
+            //cv::cvtColor(preview_frame, preview_frame, cv::COLOR_BGR2RGB);
+            
+            texture_->mtx_.lock();
+            texture_->height = local_frame.rows;
+            texture_->width = local_frame.cols;
             texture_->image = local_frame.data;
             if(texture_->dirty){texture_->dirty = false;};
             texture_->mtx_.unlock();
@@ -48,6 +48,37 @@ namespace machyvision
 
             std::cout<<"Mode : "<<modeName();
             printf(" FPS: %f dimensions {%d}{%d}\n", cv::getTickFrequency() / (double) t, texture_->height, texture_->width);
+        }
+    }
+    void YOLO::detect()
+    {
+        Detector detector("weights/yolov4.cfg", "weights/yolov4.weights");
+        cv::Mat local_frame;
+        while(true)
+        {
+            int64 t = cv::getTickCount();
+
+            cam_->mtx_.lock();
+            cam_->frame.copyTo(local_frame);
+            cam_->mtx_.unlock();
+            std::vector<bbox_t> result_vec = detector.detect(local_frame);
+            for (auto &i : result_vec) {
+                cv::rectangle(local_frame, cv::Rect(i.x, i.y, i.w, i.h), cv::Scalar(50, 200, 50), 3);
+            }
+
+            texture_->mtx_.lock();
+            texture_->height = local_frame.rows;
+            texture_->width = local_frame.cols;
+            texture_->image = local_frame.data;
+            if(texture_->dirty){texture_->dirty = false;};
+            texture_->mtx_.unlock();    
+            std::cout<<"-------------------------------------------------------------\n";
+            t = cv::getTickCount() - t;
+            for (auto &i : result_vec) {
+		        std::cout << "obj_id = " << i.obj_id << " - x = " << i.x << ", y = " << i.y 
+			        << ", w = " << i.w << ", h = " << i.h
+                    << ", prob = " << i.prob << std::endl;
+	        }        
         }
     }
 }
