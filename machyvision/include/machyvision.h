@@ -67,10 +67,12 @@ namespace machyvision
             YOLO(boost::asio::io_context& io_context,
                 boost::asio::thread_pool& pool,
                 machycore::texture_data* texture,
+                machycore::yolo_data* objs,
                 machycore::camera_data* cam):
             pool_(pool),
             io_context_(io_context),
             texture_(texture),
+            objs_(objs),
             cam_(cam)
             {
                 boost::asio::post(pool_, [this]() {detect();});
@@ -81,6 +83,7 @@ namespace machyvision
             boost::asio::thread_pool& pool_;
             machycore::camera_data* cam_;
             machycore::texture_data* texture_;
+            machycore::yolo_data* objs_;
     };
 }
 #endif

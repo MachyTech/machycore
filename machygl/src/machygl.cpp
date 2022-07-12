@@ -67,6 +67,7 @@ namespace machygl
         set_image_shader(shader);
         
         realize();
+        realize_2();
 
         for(;;){tick();};
     }
@@ -137,6 +138,8 @@ namespace machygl
                 glBindTexture(GL_TEXTURE_2D, machygl_var->tex);
                 break;
         }
+        glBindVertexArray(machygl_var->vao);
+        machygl_var->u_rot = 1;
 
         /* update uniforms */
         if(machygl_var->rot_location != -1) 
@@ -156,10 +159,35 @@ namespace machygl
         if (machygl_var->tex0res_location != -1)
             glUniform2fv (machygl_var->tex0res_location, 1, machygl_var->u_tex0resolution);
 
-        glBindVertexArray(machygl_var->vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+        glBindVertexArray(machygl_var->vao_2);
+
+        /* update uniforms */
+        machygl_var->u_rot = 0;
+        if(machygl_var->rot_location != -1) 
+            glUniform1f (machygl_var->rot_location, machygl_var->u_rot);
+        if(machygl_var->time_location != -1)
+            glUniform1f (machygl_var->time_location, machygl_var->u_time);
+        if(machygl_var->pos_location != -1)
+            glUniform2fv (machygl_var->pos_location, 1, machygl_var->u_pos);
+        if(machygl_var->resolution_location != -1)
+            glUniform2fv (machygl_var->resolution_location, 1, machygl_var->u_resolution);
+        if (machygl_var->fps_location != -1)
+            glUniform1f (machygl_var->fps_location, machygl_var->u_fps);
+        if (machygl_var->frame_location != -1)
+            glUniform1i (machygl_var->frame_location, machygl_var->u_frame);
+        if (machygl_var->tex0_location != -1)
+            glUniform1i (machygl_var->tex0_location, 0);
+        if (machygl_var->tex0res_location != -1)
+            glUniform2fv (machygl_var->tex0res_location, 1, machygl_var->u_tex0resolution);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
+        glDrawElements(GL_LINES, 4, GL_UNSIGNED_INT, 0);
+
+        glEnable(GL_BLEND);  
+        
         glUseProgram(0);
         glfwSwapBuffers(win_);
         glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
@@ -219,6 +247,80 @@ namespace machygl
 
         glGenVertexArrays (1, &machygl_var->vao);
         glBindVertexArray(machygl_var->vao);
+
+        glGenBuffers(3, &machygl_var->buffer[0]);
+        glGenBuffers(1, &machygl_var->element_buffer);
+
+        /* vertex data */
+        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[0]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(0);
+        
+        /* color data */
+        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[1]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(1);
+        
+        /* texture data */
+        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[2]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(texture_data), texture_data, GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(2);
+
+        GLuint indices[] = {
+            0, 1, 2,
+            3, 4, 5
+        };
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+
+        glGenTextures(1, &machygl_var->tex);
+        glBindTexture(GL_TEXTURE_2D, machygl_var->tex);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+
+    void scene::realize_2()
+    {
+        const GLfloat vertex_data[] = {
+            -0.5f, -0.5f, 0.0f,
+            -0.5f, 0.5f, 0.0f,
+            0.5f,  0.5f, 0.0f,
+
+            -0.5f, -0.5f, 0.0f,
+            0.5f, 0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+        };
+
+        const GLfloat colorData[] = {
+            1.0f, -1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 1.0f,
+            
+            0.0f, 0.0f, 1.0f,
+            1.0f, -1.0f, 0.0f,
+            0.0f, 1.0f, 0.0f,  
+        };
+
+        const GLfloat texture_data[] = {
+            0.0f, 0.0f,
+            0.0f, 1.0f,
+            1.0f, 1.0f,
+
+            0.0f, 0.0f,
+            1.0f, 1.0f,
+            1.0f, 0.0f,
+        };
+        
+        glGenVertexArrays (1, &machygl_var->vao_2);
+        glBindVertexArray(machygl_var->vao_2);
 
         glGenBuffers(3, &machygl_var->buffer[0]);
         glGenBuffers(1, &machygl_var->element_buffer);

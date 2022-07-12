@@ -53,6 +53,27 @@ namespace machycore
 
     long current_time_ms();
 
+    struct yolo_obj {
+        /* start coordinates */
+        int x, y;
+        /* wdith and height */
+        int width, height;
+        /* id : 0 is person */
+        int id;
+        /* probability */
+        float prob;
+        yolo_obj(int x,int y,int width,int height,int id,float prob) : x(x),
+         y(y), width(width), height(height), id(id), prob(prob)
+         {}
+    };
+
+    struct yolo_data {
+        /* dynamic array with yolo objects */
+        std::vector<yolo_obj> obj_array;    
+        /* mutex */
+        std::mutex mtx_;
+    };
+
     struct controller_data{
         // joystick data
         float normalizedAngle;

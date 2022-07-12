@@ -62,6 +62,7 @@ namespace machyvision
             cam_->frame.copyTo(local_frame);
             cam_->mtx_.unlock();
             std::vector<bbox_t> result_vec = detector.detect(local_frame);
+            
             for (auto &i : result_vec) {
                 cv::rectangle(local_frame, cv::Rect(i.x, i.y, i.w, i.h), cv::Scalar(50, 200, 50), 3);
             }
@@ -72,13 +73,16 @@ namespace machyvision
             texture_->image = local_frame.data;
             if(texture_->dirty){texture_->dirty = false;};
             texture_->mtx_.unlock();    
-            std::cout<<"-------------------------------------------------------------\n";
             t = cv::getTickCount() - t;
+            
+            objs_->mtx_.lock();
+            objs_->obj_array.clear();
             for (auto &i : result_vec) {
-		        std::cout << "obj_id = " << i.obj_id << " - x = " << i.x << ", y = " << i.y 
-			        << ", w = " << i.w << ", h = " << i.h
-                    << ", prob = " << i.prob << std::endl;
-	        }        
+                objs_->obj_array.push_back(machycore::yolo_obj(
+                    i.obj_id, i.x, i.y, i.w, i.h, i.prob
+                ));
+            }
+            objs_->mtx_.unlock();     
         }
     }
 }
