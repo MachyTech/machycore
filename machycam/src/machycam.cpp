@@ -115,7 +115,7 @@ namespace machycam{
         if (!cap.isOpened())
         {
             cam_->connected=0;
-            std::cout << "Can not open video stream\n";
+            //std::cout << "Can not open video stream\n";
             return;
         }
         cam_->connected = 1;

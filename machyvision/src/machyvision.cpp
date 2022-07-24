@@ -52,7 +52,7 @@ namespace machyvision
     }
     void YOLO::detect()
     {
-        Detector detector("weights/yolov4.cfg", "weights/yolov4.weights");
+        Detector detector("weights/yolov7-tiny.cfg", "weights/yolov7-tiny.weights");
         cv::Mat local_frame;
         while(true)
         {

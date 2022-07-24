@@ -142,14 +142,14 @@ namespace machygl
             }
     };
 
-    class bounding_box
+    class rectangle
     {
         public:
             GLfloat x, y, width, height;
-            rectangle(int x, int y, int width, int height, int window_width, int window_height) :
+            rectangle(int x, int y, int width, int height, int window_width, int window_height):
                 x((GLfloat) window_width/(x-window_width/2)),
                 y((GLfloat) window_height / (y-window_height/2)),
-                width((GLfloat) window_width / (width-window_width/2),
+                width((GLfloat) window_width / (width-window_width/2)),
                 height((GLfloat) window_height / (height-window_height/2))
             {
                 const GLfloat vertex_data[] = {
@@ -173,10 +173,10 @@ namespace machygl
                     0.0f, 0.0f,
                 };
 
-                realize_shader();
-                machygl_var->image_shader_dirty = false;
+                //realize_shader();
+                //machygl_var->image_shader_dirty = false;
 
-                glGenVertexArrays (1, vao);
+                glGenVertexArrays (1, &vao);
                 glBindVertexArray(vao);
 
                 glGenBuffers(3, &buffer[0]);
@@ -212,7 +212,7 @@ namespace machygl
             GLuint vao;
             GLuint element_buffer;
             GLuint buffer[3];
-    }
+    };
 
     class scene
     {
