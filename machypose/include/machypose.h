@@ -29,7 +29,7 @@ namespace machypose
             texture_(texture),
             cam_(cam)
             {
-                boost::asio::post(pool_, [this]() {detect();});
+                boost::asio::post(pool_, [this]() {detect_features();});
             } 
             void detect_features();
         private:

@@ -5,7 +5,7 @@ namespace machypose
     void ORBSLAM::detect_features()
     {
         cv::Mat local_frame;
-        cv::Mat grey_frame;
+        cv::Mat gray_frame;
         while(true)
         {
             int64 t = cv::getTickCount();
@@ -13,12 +13,15 @@ namespace machypose
             cam_->mtx_.lock();
             cam_->frame.copyTo(local_frame);
             cam_->mtx_.unlock();
-            
-            cv::cvtColor(local_frame, grey_frame, cv::COLOR_BGR2GREY);
-            cv::imshow("display", grey_frames);
-            cv::waitKey(25);
 
-            printf(" FPS %f", 3);
+            if(local_frame.data)
+            {
+                cv::cvtColor(local_frame, local_frame, cv::COLOR_RGB2GRAY);
+                cv::cvtColor(local_frame, local_frame, cv::COLOR_RGB2BGR);
+                //cv::flip(local_frame, local_frame, 0);
+            }
+
+            //printf(" FPS %f", 3);
 
             texture_->mtx_.lock();
             texture_->height = local_frame.rows;
