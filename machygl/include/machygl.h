@@ -21,12 +21,19 @@
 #include <machyapi.h>
 #include <machycontrol.h>
 
+#include <Eigen/Dense>
+
 #define MAX_NO_WINDOWS 2
 
 #define MASS_NO_MOMENT 0
 #define NO_SIM 1
 #define RAW_CAMERA_OUTPUT 2
 #define HOG_DESCRIPTOR_OUTPUT 3
+
+enum scene_enum {
+    ROTATING_TRIANGLE = 0,
+    RAW_CAMERA = 1
+};
 
 using boost::asio::steady_timer;
 
@@ -142,28 +149,90 @@ namespace machygl
             }
     };
 
-    class scene
+    struct uniform{
+        /* MVP matrix */
+        Eigen::Matrix3f mvp;
+        /* uniform values */
+        GLfloat u_fps;
+        GLfloat u_time;
+        GLfloat u_frame;
+        /* locations of uniforms in the program */
+        GLuint time_location;
+        GLuint frame_location;
+        GLuint fps_location;
+        GLuint mvp_location;
+    };
+    
+    struct Vertex
+    {
+        float x, y, z;
+        float r, g, b;
+        float u, v;
+        float nx, ny, nz;
+    };
+    
+    class shader
     {
         private:
+            GLuint program;
+
+            std::string image_shader;
             std::string vertex_shader_text;
             std::string fragment_shader_text;
 
-            int vertex_flag, fragment_flag;
+            machygl::uniform * uniforms;
+            
+            bool shader_dirty;
+            void realize();
+            void update_uniforms()
+            {
+                if(uniforms->time_location != -1)
+                    glUniform1f (uniforms->time_location, uniforms->u_time);
+                if (uniforms->fps_location != -1)
+                    glUniform1f (uniforms->fps_location, uniforms->u_fps);
+                if (uniforms->frame_location != -1)
+                    glUniform1i (uniforms->frame_location, uniforms->u_frame);
+            }
+            std::string read_shader(std::string direction);
+            int get_compile_data(GLuint shader);
+            bool link_shader(std::string ver_src, std::string frag_src);
+        public:
+            shader(std::string direction)
+                : uniforms(new uniform)
+            {
+                this->set_image_shader(direction);
+                realize();
+            }
+            void use()
+            {
+                if(this->shader_dirty)
+                    realize();
+                glUseProgram(this->program);
+            }
 
-            const char* fs_text;
-            const char* vs_text;
+            void unuse()
+            {
+                glUseProgram(0);
+            }
+            void set_image_shader(std::string direction);
 
-            long first_frame_time;
+    };
 
+    class scene
+    {
+        private:
             int scenario;
 
-            std::vector<std::string> info;
+            int first_frame_time;
+
+            std::vector<shader*> shaders;
+
+            bool scene_dirty;
+
             machygl_variables *machygl_var;
             GLFWwindow* win_;
             machycore::controller_data* controller_;
             machycore::texture_data* texture_;
-            boost::asio::steady_timer timer_1_;
-            boost::asio::steady_timer timer_2_;
             machycontrol::mass* simulation_mass;
             boost::asio::io_context& io_context_;
             boost::asio::thread_pool& pool_;
@@ -174,8 +243,6 @@ namespace machygl
                     pool_(pool),
                     controller_(c._controller),
                     scenario(MASS_NO_MOMENT),
-                    timer_1_(io_context),
-                    timer_2_(io_context),
                     machygl_var(new machygl::machygl_variables())
             {}
             scene(GLFWwindow* win, boost::asio::thread_pool& pool, boost::asio::io_context& io_context, machycore::texture_data* texture, int scene)
@@ -184,24 +251,15 @@ namespace machygl
                     pool_(pool),
                     texture_(texture),
                     scenario(scene),
-                    timer_1_(io_context),
-                    timer_2_(io_context),
                     machygl_var(new machygl::machygl_variables())
             {
-                boost::asio::post(pool_, [this](){start("shaders/basic.glsl");});
+                boost::asio::post(pool_, [this](){start();});
             }
-            
-            GLuint vertex_shader, fragment_shader;
-
             void render();
-            void set_image_shader(std::string);
+            void realize_scene();
             void realize();
-            void realize_shader();
-            void start(std::string);
+            void start();
             void tick();
-            std::string read_shader(std::string direction);
-            int get_compile_data(GLuint shader);
-            bool link_shader(std::string ver_src, std::string frag_src);
             void link_textures();
     };
 }

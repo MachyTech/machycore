@@ -24,8 +24,10 @@ endif()
 if (NOT TARGET nlohmann_json)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api/libs/json libs/json)
 endif()
-
-target_link_libraries(machygl PRIVATE Boost::boost -lpthread -lXrandr
+if (NOT TARGET eigen)
+   add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/vendor/eigen vendor/eigen)
+endif()
+target_link_libraries(machygl PRIVATE eigen Boost::boost -lpthread -lXrandr
                                        glfw nlohmann_json machycore machyapi machycontrol)
 
 # ---------------------------------------------------------

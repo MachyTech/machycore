@@ -45,7 +45,135 @@ namespace machygl
         "   FragColor = c;\n"
         "}\n";
 
-    void scene::start(std::string vs_start_dir)
+    void shader::set_image_shader(std::string direction)
+    {
+        this->image_shader.erase();
+        this->image_shader = read_shader(direction);
+        
+        this->shader_dirty = true;
+    }
+
+    std::string shader::read_shader(std::string direction)
+    {
+        std::ifstream in(direction);
+        std::string contents((std::istreambuf_iterator<char>(in)),
+            std::istreambuf_iterator<char>());
+        std::string shader_text = contents.c_str();
+        return shader_text;
+    }
+
+    int shader::get_compile_data(GLuint shader)
+    {
+        GLint isCompiled = 0;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+        if(isCompiled == GL_FALSE)
+        {
+            /* ERROR handling */
+            GLint maxLength = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+            
+            std::vector<GLchar> errorLog(maxLength);
+            glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
+            /* make sure we don't leak the shader */
+            glDeleteShader(shader);
+            for(int i=0; i<maxLength; i++){
+                std::cout<<errorLog[i];
+            }
+            /* return 1 on error */
+            return 1;
+        }
+        /* return 0 when succesfull */
+        return 0;
+    }
+
+    void shader::realize()
+    {
+        std::string fragment_shader = machygraph_frag_prefix + this->image_shader + machygraph_frag_suffix;
+        
+        if (this->program !=0)
+            glDeleteProgram(this->program);
+        
+        this->program = glCreateProgram();
+
+        if (!link_shader(machygraph_vertex_shader, fragment_shader))
+        {
+            printf("error linking shader!\n");
+        }
+        fragment_shader.erase();
+
+        uniforms->u_frame;
+
+        this->shader_dirty = false;
+    }
+
+    bool shader::link_shader(std::string ver_src, std::string frag_src)
+    {
+        bool res = true;
+
+        const char *vs_src = ver_src.c_str();
+        const char *fs_src = frag_src.c_str();
+
+        int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertex_shader, 1, &vs_src, NULL);
+        glCompileShader(vertex_shader);
+        int vertex_flag = get_compile_data(vertex_shader);
+
+        if (vertex_flag==1){
+            std::cout<<"Error when compiling"<<std::endl;
+            glDeleteShader (vertex_shader);
+            return false;
+        }
+
+        int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragment_shader, 1, &fs_src, NULL);
+        glCompileShader(fragment_shader);
+
+        int fragment_flag = get_compile_data(fragment_shader);
+        if (fragment_flag==1){
+            std::cout<<"Error when compile the fragment shader"<<std::endl;
+            glDeleteShader (fragment_shader);
+            return false;
+        }
+
+        glAttachShader(this->program, vertex_shader);
+        glAttachShader(this->program, fragment_shader);
+        glLinkProgram(this->program);
+
+        int isLinked;
+
+        glGetProgramiv (program, GL_LINK_STATUS, &isLinked);
+        /* check if program is linked */
+        if (isLinked == GL_FALSE)
+        {
+            GLint maxLength;
+            glGetProgramiv (program, GL_INFO_LOG_LENGTH, &maxLength);
+            GLchar *buffer = (char *) malloc (maxLength + 1);
+            glGetProgramInfoLog (program, maxLength, NULL, buffer);
+
+            std::cout << "Linking failure:\n" << buffer << std::endl;
+            res = false;
+            free(buffer);
+
+            glDeleteProgram (this->program);
+            
+            glDeleteShader (vertex_shader);
+            glDeleteShader (fragment_shader);
+            return res;
+        }
+
+        uniforms->time_location = glGetUniformLocation (program, "u_time");
+        uniforms->fps_location = glGetUniformLocation (program, "u_fps");
+        uniforms->frame_location = glGetUniformLocation (program, "u_frame");
+
+        glDetachShader (this->program, vertex_shader);
+        glDetachShader (this->program, fragment_shader);
+        glDeleteShader (vertex_shader);
+        glDeleteShader (fragment_shader);
+        return res;
+
+    }
+
+    void scene::start()
     {   
         int width, height;
         glfwGetFramebufferSize(win_, &width, &height);
@@ -63,70 +191,38 @@ namespace machygl
         }    
         glfwSwapInterval(1);
         
-        std::string shader = read_shader(vs_start_dir);
-        set_image_shader(shader);
-        
-        realize();
+        realize_scene();
 
-        for(;;){tick();};
+        for(;;){render();};
     }
 
-    void scene::tick ()
-    {        
-        float previous_time = machygl_var->u_time;
-
-        long current_frame_time = machycore::current_time_ms();
-
-        machygl_var->u_time = (current_frame_time - first_frame_time) / 1000.0;
-        machygl_var->u_fps = 1 / (machygl_var->u_time - previous_time);        
-        
-        if(machygl_var->u_frame==0)
-            first_frame_time = current_frame_time;
-
-        machygl_var->u_frame++;
-
-        //printf("elapsed time: %f, elapsed frames: %d, fps: %f\n", machygl_var->u_time, machygl_var->u_frame, machygl_var->u_fps);
-
-        render();
+    void scene::realize_scene()
+    {
+        switch(scenario)
+        {
+            case ROTATING_TRIANGLE:
+                this->shaders.push_back(new shader("shaders/basic.glsl"));
+                /* creating the meshes */
+                this->realize();
+        }
+        this->scene_dirty = false;
     }
 
     void scene::render()
-    {
-        if (machygl_var->image_shader_dirty)
-            realize_shader();
+    {   
+        if(this->scene_dirty)
+            realize_scene();
         
         /* clear the viewport */
         glClearColor(0.0, 0.0, 0.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        glUseProgram(machygl_var->program);
+        
+        this->shaders[0]->use();
         
         switch (scenario)
         {
-            case MASS_NO_MOMENT:
-                if(controller_->connected)
-                    if (controller_->mtx_.try_lock())
-                        {
-#ifdef DEBUG_CONTROLLER
-                            printf("{normalizedAngle: %f, normalizedMagnitude: %f}\n", 
-                            controller_->normalizedAngle, controller_->normalizedMagnitude);      
-#endif    
-                            machycontrol::mass_no_moment(
-                            controller_->normalizedAngle, controller_->normalizedMagnitude, 
-                            simulation_mass);
-                            controller_->mtx_.unlock();
-                        }
-                    machygl_var->u_pos[0] = simulation_mass->s_x;
-                    machygl_var->u_pos[1] = simulation_mass->s_y;
-#ifdef DEBUG_MASSA        
-                    printf("mass_x: %f, mass_y: %f\n", simulation_mass->s_x, simulation_mass->s_y);
-#endif
-
-                    break;
             case RAW_CAMERA_OUTPUT:
                 texture_->mtx_.lock();
-                machygl_var->u_tex0resolution[0] = texture_->width;
-                machygl_var->u_tex0resolution[1] = texture_->height;
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 
                     texture_->width, texture_->height, 
                     0, GL_RGB, GL_UNSIGNED_BYTE, texture_->image);
@@ -137,33 +233,16 @@ namespace machygl
                 glBindTexture(GL_TEXTURE_2D, machygl_var->tex);
                 break;
         }
+        
         glBindVertexArray(machygl_var->vao);
-        machygl_var->u_rot = 1;
-
-        /* update uniforms */
-        if(machygl_var->rot_location != -1) 
-            glUniform1f (machygl_var->rot_location, machygl_var->u_rot);
-        if(machygl_var->time_location != -1)
-            glUniform1f (machygl_var->time_location, machygl_var->u_time);
-        if(machygl_var->pos_location != -1)
-            glUniform2fv (machygl_var->pos_location, 1, machygl_var->u_pos);
-        if(machygl_var->resolution_location != -1)
-            glUniform2fv (machygl_var->resolution_location, 1, machygl_var->u_resolution);
-        if (machygl_var->fps_location != -1)
-            glUniform1f (machygl_var->fps_location, machygl_var->u_fps);
-        if (machygl_var->frame_location != -1)
-            glUniform1i (machygl_var->frame_location, machygl_var->u_frame);
-        if (machygl_var->tex0_location != -1)
-            glUniform1i (machygl_var->tex0_location, 0);
-        if (machygl_var->tex0res_location != -1)
-            glUniform2fv (machygl_var->tex0res_location, 1, machygl_var->u_tex0resolution);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glEnable(GL_BLEND);  
         
-        glUseProgram(0);
+        this->shaders[0]->unuse();
+
         glfwSwapBuffers(win_);
         glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
             glViewport(0,0, width, height);
@@ -172,17 +251,6 @@ namespace machygl
         if (glfwWindowShouldClose(win_)){
             exit(1);
         }
-    }
-
-    void scene::set_image_shader(std::string shader)
-    {
-        machygl_var->image_shader.erase();
-        machygl_var->image_shader = shader;
-        if (machygl_var->error_set)
-        {
-            machygl_var->error_set = false;
-        }
-        machygl_var->image_shader_dirty = true;
     }
 
     void scene::realize()
@@ -217,9 +285,6 @@ namespace machygl
             1.0f, 0.0f,
         };
         
-        realize_shader();
-        machygl_var->image_shader_dirty = false;
-
         glGenVertexArrays (1, &machygl_var->vao);
         glBindVertexArray(machygl_var->vao);
 
@@ -262,143 +327,26 @@ namespace machygl
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
 
-    void scene::realize_shader()
-    {
-        std::string fragment_shader = machygraph_frag_prefix + machygl_var->image_shader + machygraph_frag_suffix;
+/*
+    void scene::tick ()
+    {        
+        float previous_time = machygl_var->u_time;
 
-        if (!link_shader(machygraph_vertex_shader, fragment_shader))
-        {
-            printf("error linking shader!\n");
-            machygl_var->error_set = true;
-        }
-        fragment_shader.erase();
-        /* start the new shader at time zero */
-        machygl_var->u_frame = 0;
+        long current_frame_time = machycore::current_time_ms();
+
+        machygl_var->u_time = (current_frame_time - first_frame_time) / 1000.0;
+        machygl_var->u_fps = 1 / (machygl_var->u_time - previous_time);        
         
-        /* create the physics object */
-        // simulation_mass = new machycontrol::mass(1);
+        if(machygl_var->u_frame==0)
+            first_frame_time = current_frame_time;
 
-        machygl_var->image_shader_dirty = false;
+        machygl_var->u_frame++;
+
+        //printf("elapsed time: %f, elapsed frames: %d, fps: %f\n", machygl_var->u_time, machygl_var->u_frame, machygl_var->u_fps);
+
+        render();
     }
-
-    bool scene::link_shader(std::string ver_src, std::string frag_src)
-    {
-        bool res = true;
-
-        const char *vs_src = ver_src.c_str();
-        const char *fs_src = frag_src.c_str();
-        switch(scenario)
-        {
-            case RAW_CAMERA_OUTPUT:
-                    printf("[RAW_CAMERA_OUTPUT] vs :\n %s\n", vs_src);
-                    printf("[RAW_CAMERA_OUTPUT] fs :\n %s\n", fs_src);
-                    break;
-            default:
-                    printf("vs :\n %s\n", vs_src);
-                    printf("fs :\n %s\n", fs_src);
-                    break;
-        }
-
-        vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertex_shader, 1, &vs_src, NULL);
-        glCompileShader(vertex_shader);
-        vertex_flag = get_compile_data(vertex_shader);
-
-        if (vertex_flag==1){
-            std::cout<<"Error when compiling"<<std::endl;
-            glDeleteShader (vertex_shader);
-            return false;
-        }
-
-        fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragment_shader, 1, &fs_src, NULL);
-        glCompileShader(fragment_shader);
-
-        fragment_flag = get_compile_data(fragment_shader);
-        if (fragment_flag==1){
-            std::cout<<"Error when compile the fragment shader"<<std::endl;
-            glDeleteShader (fragment_shader);
-            return false;
-        }
-
-        GLuint program = glCreateProgram();
-        glAttachShader(program, vertex_shader);
-        glAttachShader(program, fragment_shader);
-        glLinkProgram(program);
-
-        int isLinked;
-
-        glGetProgramiv (program, GL_LINK_STATUS, &isLinked);
-        /* check if program is linked */
-        if (isLinked == GL_FALSE)
-        {
-            GLint maxLength;
-            glGetProgramiv (program, GL_INFO_LOG_LENGTH, &maxLength);
-            GLchar *buffer = (char *) malloc (maxLength + 1);
-            glGetProgramInfoLog (program, maxLength, NULL, buffer);
-
-            std::cout << "Linking failure:\n" << buffer << std::endl;
-            res = false;
-            free(buffer);
-
-            glDeleteProgram (program);
-            
-            glDeleteShader (vertex_shader);
-            glDeleteShader (fragment_shader);
-            return res;
-        }
-        if (machygl_var->program !=0)
-            glDeleteProgram(machygl_var->program);
-
-        machygl_var->program = program;
-        machygl_var->rot_location = glGetUniformLocation (program, "u_rot");
-        machygl_var->time_location = glGetUniformLocation (program, "u_time");
-        machygl_var->pos_location = glGetUniformLocation (program, "u_pos");
-        machygl_var->resolution_location = glGetUniformLocation (program, "u_resolution");
-        machygl_var->fps_location = glGetUniformLocation (program, "u_fps");
-        machygl_var->frame_location = glGetUniformLocation (program, "u_frame");
-        machygl_var->tex0_location = glGetUniformLocation (program, "u_tex0");
-        machygl_var->tex0res_location = glGetUniformLocation (program, "u_tex0resolution");
-
-        glDetachShader (program, vertex_shader);
-        glDetachShader (program, fragment_shader);
-        glDeleteShader (vertex_shader);
-        glDeleteShader (fragment_shader);
-        return res;
-    }
-
-    int scene::get_compile_data(GLuint shader)
-    {
-        GLint isCompiled = 0;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-        if(isCompiled == GL_FALSE)
-        {
-            /* ERROR handling */
-            GLint maxLength = 0;
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-            
-            std::vector<GLchar> errorLog(maxLength);
-            glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
-            /* make sure we don't leak the shader */
-            glDeleteShader(shader);
-            for(int i=0; i<maxLength; i++){
-                std::cout<<errorLog[i];
-            }
-            /* return 1 on error */
-            return 1;
-        }
-        /* return 0 when succesfull */
-        return 0;
-    }
-
-    std::string scene::read_shader(std::string direction)
-    {
-        std::ifstream in(direction);
-        std::string contents((std::istreambuf_iterator<char>(in)),
-            std::istreambuf_iterator<char>());
-        std::string shader_text = contents.c_str();
-        return shader_text;
-    }
+*/
 
     /* more c++ like implementation of shader linker -> worth investigation which is better */
     /*
