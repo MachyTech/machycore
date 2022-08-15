@@ -7,3 +7,9 @@
 [submodule "machyvision/libs/darknet"]
 	path = machyvision/libs/darknet
 	url = https://github.com/AlexeyAB/darknet.git
+[submodule "machypose/libs/ORB_SLAM3"]
+	path = machypose/libs/ORB_SLAM3
+	url = https://github.com/UZ-SLAMLab/ORB_SLAM3.git
+[submodule "machypose/libs/Pangolin"]
+	path = machypose/libs/Pangolin
+	url = https://github.com/stevenlovegrove/Pangolin.git
