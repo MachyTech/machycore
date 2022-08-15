@@ -4,3 +4,9 @@
 [submodule "machyvision/libs/darknet"]
 	path = machyvision/libs/darknet
 	url = https://github.com/AlexeyAB/darknet.git
+[submodule "vendor/eigen"]
+	path = vendor/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "api/libs/json"]
+	path = api/libs/json
+	url = https://github.com/nlohmann/json.git

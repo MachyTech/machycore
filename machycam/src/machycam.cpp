@@ -94,7 +94,7 @@ namespace machycam{
         printf("doing something\n");
         int width = 0;
         printf("doing something else \n");
-        img = cv::imread("media/lenna.png");
+        img = cv::imread("media/beach.jpg");
         if ( !img.data )
         {
             std::cout<<"No image data \n";

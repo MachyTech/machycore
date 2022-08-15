@@ -142,78 +142,6 @@ namespace machygl
             }
     };
 
-    class bounding_box
-    {
-        public:
-            GLfloat x, y, width, height;
-            rectangle(int x, int y, int width, int height, int window_width, int window_height) :
-                x((GLfloat) window_width/(x-window_width/2)),
-                y((GLfloat) window_height / (y-window_height/2)),
-                width((GLfloat) window_width / (width-window_width/2),
-                height((GLfloat) window_height / (height-window_height/2))
-            {
-                const GLfloat vertex_data[] = {
-                    x, y, 0.0f,
-                    x, y+height, 0.0f,
-                    x+width,  y+height, 0.0f,
-                    x, y, 0.0f,
-                };
-
-                const GLfloat colorData[] = {
-                    1.0f, -1.0f, 0.0f,
-                    0.0f, 1.0f, 0.0f,
-                    0.0f, 0.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f,
-                };
-
-                const GLfloat texture_data[] = {
-                    0.0f, 0.0f,
-                    0.0f, 1.0f,
-                    1.0f, 1.0f,
-                    0.0f, 0.0f,
-                };
-
-                realize_shader();
-                machygl_var->image_shader_dirty = false;
-
-                glGenVertexArrays (1, vao);
-                glBindVertexArray(vao);
-
-                glGenBuffers(3, &buffer[0]);
-                glGenBuffers(1, &element_buffer);
-
-                /* vertex data */
-                glBindBuffer(GL_ARRAY_BUFFER, buffer[0]);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-                glEnableVertexAttribArray(0);
-                
-                /* color data */
-                glBindBuffer(GL_ARRAY_BUFFER, buffer[1]);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-                glEnableVertexAttribArray(1);
-                
-                /* texture data */
-                glBindBuffer(GL_ARRAY_BUFFER, buffer[2]);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(texture_data), texture_data, GL_STATIC_DRAW);
-                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-                glEnableVertexAttribArray(2);
-
-                GLuint indices[] = {
-                    0, 1, 2,
-                    3, 4, 5
-                };
-
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-            }
-        private:
-            GLuint vao;
-            GLuint element_buffer;
-            GLuint buffer[3];
-    }
-
     class scene
     {
         private:
@@ -260,7 +188,7 @@ namespace machygl
                     timer_2_(io_context),
                     machygl_var(new machygl::machygl_variables())
             {
-                boost::asio::post(pool_, [this](){start("shaders/image.glsl");});
+                boost::asio::post(pool_, [this](){start("shaders/basic.glsl");});
             }
             
             GLuint vertex_shader, fragment_shader;
@@ -268,7 +196,6 @@ namespace machygl
             void render();
             void set_image_shader(std::string);
             void realize();
-            void realize_2();
             void realize_shader();
             void start(std::string);
             void tick();
