@@ -2,35 +2,47 @@
 
 namespace machypose
 {
-    void ORBSLAM::detect_features()
+    void ORBSLAM::detectMonocular()
     {
-        cv::Mat local_frame;
-        cv::Mat grey_frame;
-        while(true)
+        int width_img, height_img;
+        double timestamp_image = -1.0;
+        int count_im_buffer = 0; // count dropped frames
+        
+        string Vocabpath = "libs/ORB_SLAM3/Vocabulary/ORBvoc.txt"
+        string Settingspath = "./libs/ORB_SLAM3/Examples/Monocular/Realsense_D435i.yaml"
+        // Create SLAM system. It initializes all system threads and gets ready to process frames.
+        ORB_SLAM3::System SLAM(Vocabpath, Settingspath, ORB_SLAM3::System::MONOCULAR, false, 0);
+        float imageScale = SLAM.GetImageScale();
+
+        double timestamp;
+        cv::Mat im;
+        while (!SLAM.isShutDown())
         {
-            int64 t = cv::getTickCount();
-
+            count_im_buffer++;
+            double new_timestamp = std::chrono::system_clock::now().time_since_epoch().count();
+            if (abs(timestamp_image-new_timestamp)<0.001){
+                count_im_buffer--;
+            }
             cam_->mtx_.lock();
-            cam_->frame.copyTo(local_frame);
+            cam_->frame.copyTo(im);
             cam_->mtx_.unlock();
-            
-            cv::cvtColor(local_frame, grey_frame, cv::COLOR_BGR2GREY);
-            cv::imshow("display", grey_frames);
-            cv::waitKey(25);
 
-            printf(" FPS %f", 3);
+            timestamp_image = std::chrono::system_clock::now().time_since_epoch().count();
+            timestamp = timestamp_image * 1e-3;
 
-            texture_->mtx_.lock();
-            texture_->height = local_frame.rows;
-            texture_->width = local_frame.cols;
-            texture_->image = local_frame.data;
-            if(texture_->dirty)
-                {
-                    texture_->dirty = false;
-                };
-            texture_->mtx_.unlock();  
-
-            t = cv::getTickCount() - t;
+            if(imageScale != 1.f)
+            {
+                int width = im.cols * imageScale;
+                int height = im.rows * imageScale;
+                cv::resize(im, im, cv::Size(width, height));
+            }
+            // Stereo images are already rectified.
+            Sophus::SE3f Tcw = SLAM.TrackMonocular(im, timestamp);
+            Sophus::SE3f Twc = Tcw.inverse();
+            Eigen::Quaternionf q = Twc.unit_quaternion();
+            Eigen::Vector3f twc = Twc.translation();
+            std::cout << "x: " << twc(0) << " y: " << twc(1) << " z: " << twc(2) << " rx: " q.x() << " ry: " << q.y() << " rz: " << q.z() << std::endl;
         }
+        cout << "System shutdown!\n";
     }
 }

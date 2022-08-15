@@ -125,7 +125,7 @@ namespace machycam{
             /* store frame in current thread for less time in critical part */
             cv::Mat local_frame;
             cap >> local_frame;
-
+            
             /* lock the camera struct and copy the local frame */
             cam_->mtx_.lock();
             cam_->frame = local_frame.clone();

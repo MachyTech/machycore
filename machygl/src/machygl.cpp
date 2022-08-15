@@ -67,7 +67,7 @@ namespace machygl
         set_image_shader(shader);
         
         realize();
-        realize_2();
+        //realize_2();
 
         for(;;){tick();};
     }

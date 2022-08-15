@@ -97,6 +97,17 @@ namespace machycore
         texture_data() : dirty(true){}
     };
 
+    struct feature_obj {
+        int x, y;
+        feature_obj(int x, int y) : x(x), y(y) {}
+    };
+
+    struct pose_data{
+        float x,y,z;
+        std::vector<feature_obj> feature_array;
+        std::mutex mtx_;
+    };
+
     struct camera_data{
         /* opencv frame for convenience in other algorithms */
         cv::Mat frame;

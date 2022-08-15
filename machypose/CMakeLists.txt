@@ -12,10 +12,23 @@ target_include_directories(machypose PUBLIC
     ${OpenCV_INCLUDE_DIRS}
 )
 
+if (NOT TARGET ORB_SLAM3)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machypose/libs/ORB_SLAM3/ libs/ORB_SLAM3/)
+endif()
+find_package(Pangolin REQUIRED)
+if (NOT TARGET DBoW2)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machypose/libs/ORB_SLAM3/Thirdparty/DBoW2/ libs/ORB_SLAM3/Thirdparty/DBoW2/)
+endif()
+if (NOT TARGET g2o)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machypose/libs/ORB_SLAM3/Thirdparty/g2o/ libs/ORB_SLAM3/Thirdparty/g2o/)
+endif()
+if (NOT TARGET Sophus)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machypose/libs/ORB_SLAM3/Thirdparty/Sophus/ libs/ORB_SLAM3/Thirdparty/Sophus/)
+endif()
 if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
 endif()
-target_link_libraries(machypose PRIVATE Boost::boost machycore ${OpenCV_LIBS})
+target_link_libraries(machypose PRIVATE Boost::boost ${OpenCV_LIBS} machycore ORB_SLAM3 Pangolin Sophus DBoW2 g2o)
 
 # ---------------------------------------------------------
 # Install
