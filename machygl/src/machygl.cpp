@@ -9,31 +9,40 @@ namespace machygl
         "layout (location = 0) in vec3 VertexPosition;\n"
         "layout (location = 1) in vec3 VertexColor;\n"
         "layout (location = 2) in vec2 VertexTexture;\n"
+        "layout (location = 3) in vec3 VertexNormal;\n"
         "\n"
-        "out vec3 Color;\n"
-        "out vec2 Texture;\n"
+        "uniform mat4 mvp;\n"
         "\n"
+        "out vec3 vs_position;\n"
+        "out vec3 vs_color;\n"
+        "out vec2 vs_texcoord;\n"
+        "out vec3 vs_normal;\n"
+        "\n"
+        "mat4 aMat4 = mat4(1.0, 0.0, 0.0, 0.0,\n"
+        "          0.0, 1.0, 0.0, 0.0,\n"
+        "          0.0, 0.0, 1.0, 0.0,\n"  // 3. column
+        "          0.0, 0.0, 0.0, 1.0);\n"
         "void main()\n"
         "{\n"
-        "   Color = VertexColor;\n"
+        "   vs_position = vec4(mvp * vec4(VertexPosition, 1.f)).xyz;\n"
+        "   vs_color = VertexColor;\n"
         "   // use only x and y data\n"
-        "   Texture = VertexTexture;\n"
-        "   gl_Position = vec4(VertexPosition, 1.0);\n"
+        "   vs_texcoord = vec2(VertexTexture.x, VertexTexture.y * -1.f);\n"
+        "   gl_Position = mvp * vec4(VertexPosition, 1.0);\n"
         "}\n";
     
     std::string machygraph_frag_prefix =
         "#version 460\n"
         "\n"
-        "in vec3 Color;\n"
-        "in vec2 Texture;\n"
+        "in vec3 vs_position;\n"
+        "in vec3 vs_color;\n"
+        "in vec2 vs_texcoord;\n"
+        "in vec3 vs_normal;\n"
         "\n"
         "layout (location = 0) out vec4 FragColor;\n"
         "\n"
-        "uniform vec2 u_tex0resolution;\n"
+        "uniform mat4 mvp;\n"
         "uniform sampler2D u_tex0;\n"
-        "uniform vec2 u_resolution;\n"
-        "uniform float u_rot;\n"
-        "uniform vec2 u_pos;\n"
         "uniform float u_time;\n"
         "uniform float u_fps;\n"
         "uniform int u_frame;\n";
@@ -41,15 +50,111 @@ namespace machygl
     std::string machygraph_frag_suffix =
         "\nvoid main() {\n"
         "   vec4 c;\n"    
-        "   machygraph_main(c, Color, Texture);\n"
+        "   machygraph_main(c, vs_color, vs_texcoord);\n"
         "   FragColor = c;\n"
         "}\n";
+
+    void scene::realize_scene()
+    {
+        switch(scenario)
+        {
+            case ROTATING_TRIANGLE:
+                this->shaders.push_back(new shader("shaders/basic.glsl"));
+                /* meshes */
+                this->meshes.push_back(
+                    new mesh(
+                        new machygl::triangle(),
+                        Eigen::Vector3f{0.3f, 0.f, 0.f},
+                        Eigen::Vector3f{0.f, 0.f, 1.f},
+                        Eigen::Vector3f{0.5f, 0.5f, 0.5f}
+                    )
+                );
+                this->meshes.push_back(
+                    new mesh(
+                        new machygl::triangle(),
+                        Eigen::Vector3f{-0.3f, 0.f, 0.f},
+                        Eigen::Vector3f{0.f, 0.f, 1.57f},
+                        Eigen::Vector3f{0.3f, 0.3f, 0.3f}
+                    )
+                );
+
+                this->realize();
+        }
+        this->scene_dirty = false;
+    }
+
+    void scene::render()
+    {   
+        if(this->scene_dirty)
+            realize_scene();
+        
+        /* clear the viewport */
+        glClearColor(0.0, 0.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        for (auto& i : meshes)
+            i->render(this->shaders[0]);
+
+        this->meshes[0]->rotateX(this->shaders[0]->getTime());
+        this->meshes[1]->rotateX(this->shaders[0]->getTime()*0.5);
+
+        glEnable(GL_BLEND);  
+        
+        glfwSwapBuffers(win_);
+        glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
+            glViewport(0,0, width, height);
+        });
+        glfwPollEvents();
+        if (glfwWindowShouldClose(win_)){
+            exit(1);
+        }
+    }
+
+    void mesh::initVAO()
+    {    
+        /* create the vao */
+        glCreateVertexArrays(1, &this->VAO);
+        glBindVertexArray(this->VAO);
+        /* create the vbo */
+        glGenBuffers(1, &this->VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+        
+        /* bind buffer data */
+        glBufferData(GL_ARRAY_BUFFER, this->nrOfVertices * sizeof(Vertex), this->vertexarray, GL_STATIC_DRAW);
+
+        /* vertex data */
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, x));
+        glEnableVertexAttribArray(0);
+        
+        /* color data */
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, r));
+        glEnableVertexAttribArray(1);
+        
+        /* texture data */
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, u));
+        glEnableVertexAttribArray(2);
+
+        /* normal data */
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, nx));
+        glEnableVertexAttribArray(3);
+        
+        /* generate EBO and Bind and send Data */
+        if (this->nrOfIndices > 0)
+        {
+            glGenBuffers(1, &this->EBO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->nrOfIndices * sizeof(GLuint), this->indices, GL_STATIC_DRAW);
+        }
+
+        //glBindVertexArray(0);
+    }
 
     void shader::set_image_shader(std::string direction)
     {
         this->image_shader.erase();
         this->image_shader = read_shader(direction);
-        
+        uniforms->u_frame = 0;
+
         this->shader_dirty = true;
     }
 
@@ -141,14 +246,14 @@ namespace machygl
 
         int isLinked;
 
-        glGetProgramiv (program, GL_LINK_STATUS, &isLinked);
+        glGetProgramiv (this->program, GL_LINK_STATUS, &isLinked);
         /* check if program is linked */
         if (isLinked == GL_FALSE)
         {
             GLint maxLength;
-            glGetProgramiv (program, GL_INFO_LOG_LENGTH, &maxLength);
+            glGetProgramiv (this->program, GL_INFO_LOG_LENGTH, &maxLength);
             GLchar *buffer = (char *) malloc (maxLength + 1);
-            glGetProgramInfoLog (program, maxLength, NULL, buffer);
+            glGetProgramInfoLog (this->program, maxLength, NULL, buffer);
 
             std::cout << "Linking failure:\n" << buffer << std::endl;
             res = false;
@@ -160,10 +265,10 @@ namespace machygl
             glDeleteShader (fragment_shader);
             return res;
         }
-
-        uniforms->time_location = glGetUniformLocation (program, "u_time");
-        uniforms->fps_location = glGetUniformLocation (program, "u_fps");
-        uniforms->frame_location = glGetUniformLocation (program, "u_frame");
+        uniforms->mvp_location = glGetUniformLocation(this->program, "mvp");
+        uniforms->time_location = glGetUniformLocation (this->program, "u_time");
+        uniforms->fps_location = glGetUniformLocation (this->program, "u_fps");
+        uniforms->frame_location = glGetUniformLocation (this->program, "u_frame");
 
         glDetachShader (this->program, vertex_shader);
         glDetachShader (this->program, fragment_shader);
@@ -196,128 +301,8 @@ namespace machygl
         for(;;){render();};
     }
 
-    void scene::realize_scene()
-    {
-        switch(scenario)
-        {
-            case ROTATING_TRIANGLE:
-                this->shaders.push_back(new shader("shaders/basic.glsl"));
-                /* creating the meshes */
-                this->realize();
-        }
-        this->scene_dirty = false;
-    }
-
-    void scene::render()
-    {   
-        if(this->scene_dirty)
-            realize_scene();
-        
-        /* clear the viewport */
-        glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
-        this->shaders[0]->use();
-        
-        switch (scenario)
-        {
-            case RAW_CAMERA_OUTPUT:
-                texture_->mtx_.lock();
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 
-                    texture_->width, texture_->height, 
-                    0, GL_RGB, GL_UNSIGNED_BYTE, texture_->image);
-                texture_->mtx_.unlock();
-                glGenerateMipmap(GL_TEXTURE_2D);
-                
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, machygl_var->tex);
-                break;
-        }
-        
-        glBindVertexArray(machygl_var->vao);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        glEnable(GL_BLEND);  
-        
-        this->shaders[0]->unuse();
-
-        glfwSwapBuffers(win_);
-        glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
-            glViewport(0,0, width, height);
-        });
-        glfwPollEvents();
-        if (glfwWindowShouldClose(win_)){
-            exit(1);
-        }
-    }
-
     void scene::realize()
     {    
-        const GLfloat vertex_data[] = {
-            -1.0f, -1.0f, 0.0f,
-            -1.0f, 1.0f, 0.0f,
-            1.0f,  1.0f, 0.0f,
-
-            -1.0f, -1.0f, 0.0f,
-            1.0f, 1.0f, 0.0f,
-            1.0f, -1.0f, 0.0f,
-        };
-
-        const GLfloat colorData[] = {
-            1.0f, -1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 1.0f,
-            
-            0.0f, 0.0f, 1.0f,
-            1.0f, -1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,  
-        };
-
-        const GLfloat texture_data[] = {
-            0.0f, 0.0f,
-            0.0f, 1.0f,
-            1.0f, 1.0f,
-
-            0.0f, 0.0f,
-            1.0f, 1.0f,
-            1.0f, 0.0f,
-        };
-        
-        glGenVertexArrays (1, &machygl_var->vao);
-        glBindVertexArray(machygl_var->vao);
-
-        glGenBuffers(3, &machygl_var->buffer[0]);
-        glGenBuffers(1, &machygl_var->element_buffer);
-
-        /* vertex data */
-        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[0]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(0);
-        
-        /* color data */
-        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[1]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(colorData), colorData, GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(1);
-        
-        /* texture data */
-        glBindBuffer(GL_ARRAY_BUFFER, machygl_var->buffer[2]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(texture_data), texture_data, GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(2);
-
-        GLuint indices[] = {
-            0, 1, 2,
-            3, 4, 5
-        };
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, machygl_var->element_buffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-
         glGenTextures(1, &machygl_var->tex);
         glBindTexture(GL_TEXTURE_2D, machygl_var->tex);
 
