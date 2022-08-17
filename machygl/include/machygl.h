@@ -337,7 +337,7 @@ namespace machygl
                 Eigen::DiagonalMatrix<float, 3> m_d;
                 m_d.diagonal() = this->scale;
             
-                this->MVP.block<3,3>(0,0)*= m_d;
+                this->MVP.block<3,3>(0,0) *= m_d;
 
                 shader->setMVP(this->MVP);
             }
@@ -348,6 +348,7 @@ namespace machygl
                 Eigen::Vector3f rotation,
                 Eigen::Vector3f scale)
             {
+                printf("[MESH] creating vertices\n");
                 this->position = position;
                 this->rotation = rotation;
                 this->scale = scale;
@@ -404,10 +405,57 @@ namespace machygl
             {
                 this->rotation(0) = x;
             }
+    };
 
-            void setOrigin(const Eigen::Vector3f position)
+    class model
+    {
+        private:
+            std::vector<mesh*> meshes;
+
+            std::vector<shader*> shaders;
+
+            Eigen::Vector3f position;
+        public:
+            model( 
+                Eigen::Vector3f position,
+                std::vector<shader*>& shaders,
+                std::vector<mesh*>& meshes
+            )
             {
                 this->position = position;
+
+                for (auto* i : shaders)
+                    this->shaders.push_back(new shader(*i));
+                
+                for (auto* i : meshes)
+                {
+                    printf("[MODEL] adding meshes\n");    
+                    this->meshes.push_back(new mesh(*i));
+                }
+                
+                for (auto* i: meshes)
+                    i->move(this->position);
+            }
+
+            ~model()
+            {
+                for(auto*& i : this->meshes)
+                    delete i;
+            }
+
+            void rotateX(GLfloat x)
+            {
+                for(auto& i : this->meshes)
+                    i->rotateX(x);
+            }
+
+            void render()
+            {
+                for (auto& i : this->meshes)
+                {
+                    i->render(this->shaders[0]);
+                }
+                rotateX(this->shaders[0]->getTime());
             }
     };
 
@@ -418,15 +466,15 @@ namespace machygl
 
             int first_frame_time;
 
-            std::vector<shader*> shaders;
-
             bool scene_dirty;
 
             GLuint VBO;
             GLuint VAO;
             GLuint EBO;
 
-            std::vector<mesh*> meshes;
+            std::vector<model*> models;
+            
+            std::vector<shader*> shaders;
 
             machygl_variables *machygl_var;
             GLFWwindow* win_;

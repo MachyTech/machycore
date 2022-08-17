@@ -57,11 +57,14 @@ namespace machygl
     void scene::realize_scene()
     {
         switch(scenario)
-        {
+        {            
             case ROTATING_TRIANGLE:
+            {
                 this->shaders.push_back(new shader("shaders/basic.glsl"));
                 /* meshes */
-                this->meshes.push_back(
+                std::vector<mesh*> meshes;
+
+                meshes.push_back(
                     new mesh(
                         new machygl::triangle(),
                         Eigen::Vector3f{0.3f, 0.f, 0.f},
@@ -69,7 +72,8 @@ namespace machygl
                         Eigen::Vector3f{0.5f, 0.5f, 0.5f}
                     )
                 );
-                this->meshes.push_back(
+                
+                meshes.push_back(
                     new mesh(
                         new machygl::triangle(),
                         Eigen::Vector3f{-0.3f, 0.f, 0.f},
@@ -78,7 +82,12 @@ namespace machygl
                     )
                 );
 
-                this->realize();
+                this->models.push_back(new model(
+                    Eigen::Vector3f{0.f, 0.3f, 0.f},
+                    shaders,
+                    meshes
+                ));
+            }
         }
         this->scene_dirty = false;
     }
@@ -92,15 +101,14 @@ namespace machygl
         glClearColor(0.0, 0.0, 0.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        for (auto& i : meshes)
-            i->render(this->shaders[0]);
-
-        this->meshes[0]->rotateX(this->shaders[0]->getTime());
-        this->meshes[1]->rotateX(this->shaders[0]->getTime()*0.5);
+        for (auto& i : this->models)
+            i->render();
 
         glEnable(GL_BLEND);  
         
         glfwSwapBuffers(win_);
+        glFlush();
+
         glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
             glViewport(0,0, width, height);
         });
