@@ -27,7 +27,7 @@ namespace machygl
         "   vs_position = vec4(mvp * vec4(VertexPosition, 1.f)).xyz;\n"
         "   vs_color = VertexColor;\n"
         "   // use only x and y data\n"
-        "   vs_texcoord = vec2(VertexTexture.x, VertexTexture.y);\n"
+        "   vs_texcoord = vec2(VertexTexture.x, VertexTexture.y * -1.f);\n"
         "   gl_Position = mvp * vec4(VertexPosition, 1.0);\n"
         "}\n";
     
@@ -69,26 +69,17 @@ namespace machygl
 
                 meshes.push_back(
                     new mesh(
-                        new machygl::triangle(),
+                        new machygl::cube(),
                         Eigen::Vector3f{0.3f, 0.f, 0.f},
-                        Eigen::Vector3f{0.f, 0.f, 1.f},
+                        Eigen::Vector3f{0.f, 0.25*PI, 0.125*PI},
                         Eigen::Vector3f{0.5f, 0.5f, 0.5f}
                     )
                 );
                 
-                meshes.push_back(
-                    new mesh(
-                        new machygl::triangle(),
-                        Eigen::Vector3f{-0.3f, 0.f, 0.f},
-                        Eigen::Vector3f{0.f, 0.f, 1.57f},
-                        Eigen::Vector3f{0.3f, 0.3f, 0.3f}
-                    )
-                );
-
                 this->textures.push_back(new texture("media/beach.jpg", GL_TEXTURE_2D));
 
                 this->models.push_back(new model(
-                    Eigen::Vector3f{0.f, 0.5f, 0.f},
+                    Eigen::Vector3f{0.f, 0.f, 0.f},
                     shaders,
                     textures,
                     meshes
@@ -105,13 +96,17 @@ namespace machygl
         
         /* clear the viewport */
         glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glEnable(GL_DEPTH_TEST);  
         
         for (auto& i : this->models)
             i->render();
-        this->models[0]->rotateX(this->shaders[0]->getTime());
 
-        glEnable(GL_BLEND);  
+        //this->models[0]->rotateY(this->shaders[0]->getTime());
+        //this->models[0]->rotateX(this->shaders[0]->getTime());
+
+        //glEnable(GL_BLEND);  
         
         glfwSwapBuffers(win_);
         glFlush();

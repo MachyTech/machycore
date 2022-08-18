@@ -25,6 +25,8 @@
 
 #include <Eigen/Dense>
 
+#define PI 3.14
+
 #define MAX_NO_WINDOWS 2
 
 #define MASS_NO_MOMENT 0
@@ -288,6 +290,7 @@ namespace machygl
                 glBindTexture(type, 0);
                 stbi_image_free(image);
             }
+            
             ~texture()
             {
                 glDeleteTextures(1, &this->id);
@@ -356,6 +359,47 @@ namespace machygl
                 {
                     0, 1, 2
                 };
+                unsigned nrOfIndices = sizeof(indices) / sizeof(GLuint);
+                this->set(vertices, nrOfVertices, indices, nrOfIndices);
+            }
+    };
+
+    class cube : public primitive
+    {
+        public:
+            cube()
+                : primitive()
+            {
+                Vertex vertices[] { 
+                    //Position              //Color             //Texcoords     //Normals   
+			        {-0.5f, 0.5f, 0.5f,         1.f, 0.f, 0.f,      0.f, 1.f,       0.f, 0.f, 1.f},
+			        {-0.5f, -0.5f, 0.5f,	    0.f, 1.f, 0.f,		0.f, 0.f,		0.f, 0.f, 1.f},
+			        {0.5f, -0.5f, 0.5f,			0.f, 0.f, 1.f,		1.f, 0.f,		0.f, 0.f, 1.f},
+			        {0.5f, 0.5f, 0.5f,			1.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, 1.f},
+
+			        {0.5f, 0.5f, -0.5f,			1.f, 0.f, 0.f,		0.f, 1.f,		0.f, 0.f, -1.f},
+			        {0.5f, -0.5f, -0.5f,	    0.f, 1.f, 0.f,		0.f, 0.f,		0.f, 0.f, -1.f},
+			        {-0.5f, -0.5f, -0.5f,		0.f, 0.f, 1.f,		1.f, 0.f,		0.f, 0.f, -1.f},
+			        {-0.5f, 0.5f, -0.5f,	    1.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, -1.f}
+                };
+
+                unsigned nrOfVertices = sizeof(vertices) / sizeof(Vertex);
+
+                GLuint indices[] =
+                {
+                    0, 1, 2,
+                    0, 2, 3,
+
+                    7, 6, 1,
+                    7, 1, 0,
+
+                    4, 5, 6,
+                    4, 6, 7,
+
+                    3, 2, 5,
+                    3, 5, 4
+                };
+
                 unsigned nrOfIndices = sizeof(indices) / sizeof(GLuint);
                 this->set(vertices, nrOfVertices, indices, nrOfIndices);
             }
@@ -468,6 +512,10 @@ namespace machygl
             {
                 this->rotation(0) = x;
             }
+            void rotateY(GLfloat y)
+            {
+                this->rotation(1) = y;
+            }
     };
 
     class model
@@ -514,6 +562,12 @@ namespace machygl
             {
                 for(auto& i : this->meshes)
                     i->rotateX(x);
+            }
+
+            void rotateY(GLfloat y)
+            {
+                for(auto& i : this->meshes)
+                    i->rotateY(y);
             }
 
             void render()
