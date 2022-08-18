@@ -6,7 +6,6 @@ namespace machypose
     {      
         string Vocabpath = "libs/ORB_SLAM3/Vocabulary/ORBvoc.txt";
         string Settingspath = "./libs/ORB_SLAM3/Examples/Monocular/Realsense_D435i.yaml";
-        // Create SLAM system. It initializes all system threads and gets ready to process frames.
         ORB_SLAM3::System SLAM(Vocabpath, Settingspath, ORB_SLAM3::System::MONOCULAR, false, 0);
         float imageScale = SLAM.GetImageScale();
 
@@ -31,6 +30,42 @@ namespace machypose
             Eigen::Quaternionf q = Twc.unit_quaternion();
             Eigen::Vector3f twc = Twc.translation();
 
+            std::vector<ORB_SLAM3::MapPoint*> MP = SLAM.GetTrackedMapPoints();
+            std::vector<bool> vbKP = std::vector<bool>(KP.size(),false);
+            std::vector<bool> vbMP = std::vector<bool>(KP.size(),false);
+            std::vector<cv::Point2f> Matches;
+            for (int i=0; i<KP.size();i++){
+                ORB_SLAM3::MapPoint* pMP = MP[i];
+                if (pMP)
+                    if (pMP->Observations()>0)
+                        vbMP[i]=true;
+                    else
+                        vbKP[i]=true;
+                if(vbKP[i] || vbMP[i])
+                {
+                    cv::Point2f point;
+                    if(imageScale != 1.f)
+                    {
+                        point = KP[i].pt / imageScale;
+                    }
+                    else
+                    {
+                        point = KP[i].pt;
+                    }
+
+                    // This is a match to a MapPoint in the map
+                    if(vbMP[i])
+                    {   
+                        Matches.push_back(point);
+                    }
+                    else // This is match to a "visual odometry" MapPoint created in the last frame
+                    {
+                        Matches.push_back(point);
+                    }
+
+                }
+            }
+
             texture_->mtx_.lock();
             texture_->height = im.rows;
             texture_->width = im.cols;
@@ -42,6 +77,15 @@ namespace machypose
             pose_data_->pose_array.clear();
             pose_data_->pose_array.push_back(machycore::pose_obj(twc(0), twc(1), twc(2), q.x(), q.y(), q.z(), q.w()));
             pose_data_->mtx_.unlock();
+
+            feature_data_->mtx_.lock();
+            feature_data_->feature_array.clear();
+            for (auto &i : Matches) {
+                feature_data_->feature_array.push_back(machycore::feature_obj(
+                    i.x, i.y
+                ));
+            }
+            feature_data_->mtx.unlock();
         }
         cout << "System shutdown!\n";
     }
@@ -79,6 +123,42 @@ namespace machypose
             Eigen::Quaternionf q = Twc.unit_quaternion();
             Eigen::Vector3f twc = Twc.translation();
 
+            std::vector<ORB_SLAM3::MapPoint*> MP = SLAM.GetTrackedMapPoints();
+            std::vector<bool> vbKP = std::vector<bool>(KP.size(),false);
+            std::vector<bool> vbMP = std::vector<bool>(KP.size(),false);
+            std::vector<cv::Point2f> Matches;
+            for (int i=0; i<KP.size();i++){
+                ORB_SLAM3::MapPoint* pMP = MP[i];
+                if (pMP)
+                    if (pMP->Observations()>0)
+                        vbMP[i]=true;
+                    else
+                        vbKP[i]=true;
+                if(vbKP[i] || vbMP[i])
+                {
+                    cv::Point2f point;
+                    if(imageScale != 1.f)
+                    {
+                        point = KP[i].pt / imageScale;
+                    }
+                    else
+                    {
+                        point = KP[i].pt;
+                    }
+
+                    // This is a match to a MapPoint in the map
+                    if(vbMP[i])
+                    {   
+                        Matches.push_back(point);
+                    }
+                    else // This is match to a "visual odometry" MapPoint created in the last frame
+                    {
+                        Matches.push_back(point);
+                    }
+
+                }
+            }
+            
             texture_->mtx_.lock();
             texture_->height = im.rows;
             texture_->width = im.cols;
@@ -90,6 +170,15 @@ namespace machypose
             pose_data_->pose_array.clear();
             pose_data_->pose_array.push_back(machycore::pose_obj(twc(0), twc(1), twc(2), q.x(), q.y(), q.z(), q.w()));
             pose_data_->mtx_.unlock();
+
+            feature_data_->mtx_.lock();
+            feature_data_->feature_array.clear();
+            for (auto &i : Matches) {
+                feature_data_->feature_array.push_back(machycore::feature_obj(
+                    i.x, i.y
+                ));
+            }
+            feature_data_->mtx.unlock();
         }
         std::cout << "System shutdown!\n";
     }

@@ -96,6 +96,16 @@ namespace machycore
         texture_data() : dirty(true){}
     };
 
+    struct feature_obj {
+        float px, py;
+        feature_obj(float px, float py) : px(px), py(py){}
+    };
+
+    struct feature_data {
+        std::vector<feature_obj> feature_array;
+        std::mutex mtx_;
+    }
+
     struct pose_obj {
         float x, y, z, qx, qy, qz, qw;
         pose_obj(float x, float y, float z, float qx, float qy, float qz, float qw) : x(x), 

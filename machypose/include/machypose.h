@@ -22,8 +22,10 @@
 
 #include "machycore.h"
 
-#include "System.h"
+#include "ORB_SLAM3/System.h"
 
+#define MONOCULAR 0
+#define STEREO 1
 namespace machypose
 {
     unsigned char* cvMat2TexInput(cv::Mat& img);
@@ -33,6 +35,7 @@ namespace machypose
             ORBSLAM(boost::asio::io_context& io_context,
                 boost::asio::thread_pool& pool,
                 machycore::pose_data* pose_data,
+                machycore::feature_data* feature_data,
                 machycore::texture_data* texture,
                 machycore::camera_data* cam,
                 machycore::camera_data* cam2,
@@ -40,6 +43,7 @@ namespace machypose
             pool_(pool),
             io_context_(io_context),
             pose_data_(pose_data),
+            feature_data_(feature_data),
             texture_(texture),
             cam_(cam),
             cam2_(cam2),
@@ -59,6 +63,7 @@ namespace machypose
             boost::asio::io_context& io_context_;
             boost::asio::thread_pool& pool_;
             machycore::pose_data* pose_data_;
+            machycore::feature_data* feature_data_;
             machycore::texture_data* texture_;
             machycore::camera_data* cam_;
             machycore::camera_data* cam2_;

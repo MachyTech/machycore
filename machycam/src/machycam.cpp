@@ -129,7 +129,7 @@ namespace machycam{
             /* lock the camera struct and copy the local frame */
             cam_->mtx_.lock();
             cam_->frame = local_frame.clone();
-            cam_->timestamp = cap.get(CV_CAP_PROP_POS_MEC);
+            cam_->timestamp = cap.get(cv::CAP_PROP_POS_MSEC);
             cam_->fps = cv::getTickCount() - t;
             cam_->mtx_.unlock();
 
