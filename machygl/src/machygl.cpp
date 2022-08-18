@@ -27,7 +27,7 @@ namespace machygl
         "   vs_position = vec4(mvp * vec4(VertexPosition, 1.f)).xyz;\n"
         "   vs_color = VertexColor;\n"
         "   // use only x and y data\n"
-        "   vs_texcoord = vec2(VertexTexture.x, VertexTexture.y * -1.f);\n"
+        "   vs_texcoord = vec2(VertexTexture.x, VertexTexture.y);\n"
         "   gl_Position = mvp * vec4(VertexPosition, 1.0);\n"
         "}\n";
     
@@ -38,6 +38,7 @@ namespace machygl
         "in vec3 vs_color;\n"
         "in vec2 vs_texcoord;\n"
         "in vec3 vs_normal;\n"
+        "\n"
         "\n"
         "layout (location = 0) out vec4 FragColor;\n"
         "\n"
@@ -60,9 +61,11 @@ namespace machygl
         {            
             case ROTATING_TRIANGLE:
             {
+                /* shaders */
                 this->shaders.push_back(new shader("shaders/basic.glsl"));
                 /* meshes */
                 std::vector<mesh*> meshes;
+                /* textures */
 
                 meshes.push_back(
                     new mesh(
@@ -82,9 +85,12 @@ namespace machygl
                     )
                 );
 
+                this->textures.push_back(new texture("media/beach.jpg", GL_TEXTURE_2D));
+
                 this->models.push_back(new model(
-                    Eigen::Vector3f{0.f, 0.3f, 0.f},
+                    Eigen::Vector3f{0.f, 0.5f, 0.f},
                     shaders,
+                    textures,
                     meshes
                 ));
             }
@@ -103,6 +109,7 @@ namespace machygl
         
         for (auto& i : this->models)
             i->render();
+        this->models[0]->rotateX(this->shaders[0]->getTime());
 
         glEnable(GL_BLEND);  
         

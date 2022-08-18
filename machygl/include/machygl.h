@@ -21,6 +21,8 @@
 #include <machyapi.h>
 #include <machycontrol.h>
 
+#include "stb_image.h"
+
 #include <Eigen/Dense>
 
 #define MAX_NO_WINDOWS 2
@@ -245,6 +247,67 @@ namespace machygl
             }
     };
 
+    class texture
+    {
+        private:
+            GLuint id;
+            int width;
+            int height;
+            unsigned int type;
+        public:
+            texture(const char* fileName, GLenum type)
+            {
+                this->type = type;
+                printf("[TEXTURE] downloading image\n");
+                int nrChannels;
+
+                unsigned char *image = stbi_load(fileName, &this->width, &this->height, &nrChannels, 0);
+
+                glGenTextures(1, &this->id);
+                glBindTexture(type, this->id);
+
+                printf("[TEXTURE] gentex\n");
+                
+                glTexParameteri(type, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(type, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                glTexParameteri(type, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTexParameteri(type, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+                if (image)
+                {
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+                    glGenerateMipmap(type);
+                }
+                else
+                {
+                    std::cout << "ERROR::TEXTURE::TEXTURE_LOADING_FAILED: " << fileName <<"\n";
+                }
+                printf("[TEXTURE] attach image\n");
+
+                glActiveTexture(0);
+                glBindTexture(type, 0);
+                stbi_image_free(image);
+            }
+            ~texture()
+            {
+                glDeleteTextures(1, &this->id);
+            }
+
+            inline GLuint getID() const { return this->id; }
+
+            void bind(const GLint texture_unit)
+            {
+                glActiveTexture(GL_TEXTURE0 + texture_unit);
+                glBindTexture(this->type, this->id);
+            }
+
+            void unbind()
+            {
+                glActiveTexture(0);
+                glBindTexture(this->type, 0);
+            }                    
+    };
+
     class primitive
     {
         private:
@@ -414,11 +477,14 @@ namespace machygl
 
             std::vector<shader*> shaders;
 
+            std::vector<texture*> textures;
+
             Eigen::Vector3f position;
         public:
             model( 
                 Eigen::Vector3f position,
                 std::vector<shader*>& shaders,
+                std::vector<texture*>& textures,
                 std::vector<mesh*>& meshes
             )
             {
@@ -426,14 +492,15 @@ namespace machygl
 
                 for (auto* i : shaders)
                     this->shaders.push_back(new shader(*i));
-                
+                for (auto* i : textures)
+                    this->textures.push_back(new texture(*i));
                 for (auto* i : meshes)
                 {
                     printf("[MODEL] adding meshes\n");    
                     this->meshes.push_back(new mesh(*i));
                 }
                 
-                for (auto* i: meshes)
+                for (auto* i: this->meshes)
                     i->move(this->position);
             }
 
@@ -453,9 +520,12 @@ namespace machygl
             {
                 for (auto& i : this->meshes)
                 {
+                    //this->shaders[0]->use();
+                    this->textures[0]->bind(0);
+                    //this->shaders[0]->unuse();
                     i->render(this->shaders[0]);
+                    //this->textures[0]->unbind();
                 }
-                rotateX(this->shaders[0]->getTime());
             }
     };
 
@@ -475,6 +545,8 @@ namespace machygl
             std::vector<model*> models;
             
             std::vector<shader*> shaders;
+
+            std::vector<texture*> textures;
 
             machygl_variables *machygl_var;
             GLFWwindow* win_;
