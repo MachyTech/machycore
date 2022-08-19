@@ -36,7 +36,8 @@
 
 enum scene_enum {
     ROTATING_TRIANGLE = 0,
-    RAW_CAMERA = 1
+    RAW_CAMERA = 1,
+    TEST_AR_SCENE = 2
 };
 
 using boost::asio::steady_timer;
@@ -248,67 +249,129 @@ namespace machygl
                 uniforms->mvp = MVP;
             }
     };
-
     class texture
     {
         private:
             GLuint id;
-            int width;
-            int height;
             unsigned int type;
         public:
-            texture(const char* fileName, GLenum type)
+            texture() {
+                printf("did i get copied??\n");
+            }
+            virtual ~texture() {
+                glDeleteTextures(1, &this->id);
+            }
+            
+            GLuint getID() const { return this->id; }
+            unsigned int getType() const { return this->type; }
+
+            void setType(unsigned int type) { this->type = type; }
+            void setID(GLuint id) { this->id = id; }
+            
+            virtual void bind(const GLint texture_unit) { };
+
+            virtual void print() const { }
+
+            virtual void unbind() {}
+
+            virtual texture* clone() const { return (new texture(*this)); }
+    };
+
+    class dynamic_texture : public texture
+    {
+        private:
+            machycore::texture_data* tex;
+        public:
+            dynamic_texture(machycore::texture_data* tex, GLenum type)
+                : tex(tex), texture()
             {
-                this->type = type;
-                printf("[TEXTURE] downloading image\n");
+                printf("[DYNAMIC] init\n");
+                this->setType(type);
+                GLuint id;
+                glGenTextures(1, &id);
+                this->setID(id);
+                glBindTexture(this->getType(), this->getID());
+
+                glTexParameteri(this->getType(), GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(this->getType(), GL_TEXTURE_WRAP_T, GL_REPEAT);
+                glTexParameteri(this->getType(), GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTexParameteri(this->getType(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            }
+
+            virtual void bind(const GLint texture_unit)
+            {
+                this->tex->mtx_.lock();
+
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                    this->tex->width,
+                    this->tex->height,
+                    0, GL_RGB, GL_UNSIGNED_BYTE,
+                    this->tex->image);
+                
+                this->tex->mtx_.unlock();
+                glGenerateMipmap(this->getType());
+                glActiveTexture(GL_TEXTURE0 + texture_unit);
+                glBindTexture(this->getType(), this->getID());
+            }
+
+            virtual void unbind() {
+                glActiveTexture(0);
+                glBindTexture(this->getType(), 0);
+            }
+
+            virtual dynamic_texture* clone() const { return(new dynamic_texture(*this)); };
+    };
+
+    class static_texture : public texture
+    {
+        private:
+            int width, height;
+        public:
+            static_texture(const char* fileName, GLenum type)
+            {
+                printf("[STATIC] init\n");
+                this->setType(type);
                 int nrChannels;
 
                 unsigned char *image = stbi_load(fileName, &this->width, &this->height, &nrChannels, 0);
 
-                glGenTextures(1, &this->id);
-                glBindTexture(type, this->id);
+                GLuint id;
+                glGenTextures(1, &id);
+                this->setID(id);
 
-                printf("[TEXTURE] gentex\n");
+                glBindTexture(this->getType(), this->getID());
                 
-                glTexParameteri(type, GL_TEXTURE_WRAP_S, GL_REPEAT);
-                glTexParameteri(type, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                glTexParameteri(type, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-                glTexParameteri(type, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(this->getType(), GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(this->getType(), GL_TEXTURE_WRAP_T, GL_REPEAT);
+                glTexParameteri(this->getType(), GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTexParameteri(this->getType(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
                 if (image)
                 {
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-                    glGenerateMipmap(type);
+                    glGenerateMipmap(this->getType());
                 }
                 else
                 {
                     std::cout << "ERROR::TEXTURE::TEXTURE_LOADING_FAILED: " << fileName <<"\n";
                 }
-                printf("[TEXTURE] attach image\n");
-
                 glActiveTexture(0);
-                glBindTexture(type, 0);
+                glBindTexture(this->getType(), 0);
                 stbi_image_free(image);
             }
-            
-            ~texture()
-            {
-                glDeleteTextures(1, &this->id);
-            }
 
-            inline GLuint getID() const { return this->id; }
-
-            void bind(const GLint texture_unit)
+            virtual void bind(const GLint texture_unit)
             {
                 glActiveTexture(GL_TEXTURE0 + texture_unit);
-                glBindTexture(this->type, this->id);
+                glBindTexture(this->getType(), this->getID());
             }
 
-            void unbind()
-            {
+            virtual void unbind() {
                 glActiveTexture(0);
-                glBindTexture(this->type, 0);
-            }                    
+                glBindTexture(this->getType(), 0);
+            }
+
+            virtual static_texture* clone() const { return(new static_texture(*this)); };                
     };
 
     class primitive
@@ -364,6 +427,32 @@ namespace machygl
             }
     };
 
+    class quad : public primitive
+    {
+        public:
+            quad()
+                : primitive()
+            {
+                Vertex vertices[] { 
+                    //Position              //Color             //Texcoords     //Normals   
+        			{-0.5f, 0.5f, 0.f,	    1.f, 0.f, 0.f,		0.f, 1.f,		0.f, 0.f, 1.f},
+        			{-0.5f, -0.5f, 0.f,		0.f, 1.f, 0.f,		0.f, 0.f,		0.f, 0.f, 1.f},
+        			{0.5f, -0.5f, 0.f,		0.f, 0.f, 1.f,		1.f, 0.f,		0.f, 0.f, 1.f},
+        			{0.5f, 0.5f, 0.f,	    1.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, 1.f}
+               };
+
+                unsigned nrOfVertices = sizeof(vertices) / sizeof(Vertex);
+
+                GLuint indices[] =
+                {
+                    0, 1, 2,	//Triangle 1
+                    0, 2, 3		//Triangle 2
+                };
+                unsigned nrOfIndices = sizeof(indices) / sizeof(GLuint);
+                this->set(vertices, nrOfVertices, indices, nrOfIndices);
+            }
+    };
+
     class cube : public primitive
     {
         public:
@@ -397,7 +486,13 @@ namespace machygl
                     4, 6, 7,
 
                     3, 2, 5,
-                    3, 5, 4
+                    3, 5, 4,
+
+                    4, 7, 0,
+                    4, 0, 3,
+
+                    5, 6, 1,
+                    5, 2, 1
                 };
 
                 unsigned nrOfIndices = sizeof(indices) / sizeof(GLuint);
@@ -422,7 +517,7 @@ namespace machygl
             Eigen::Vector3f origin;
             Eigen::Vector3f rotation;
             Eigen::Vector3f scale;
-
+            
             Eigen::Matrix4f MVP;
 
             void initVAO();
@@ -466,6 +561,7 @@ namespace machygl
                 this->vertexarray = new Vertex[this->nrOfVertices];
                 for (size_t i = 0; i < this->nrOfVertices; i++)
                 {
+                    std::cout<<primitive->getVertices()<<std::endl;
                     this->vertexarray[i] = primitive->getVertices()[i];
                 }
 
@@ -494,13 +590,18 @@ namespace machygl
             }
 
             void render(machygl::shader* shader)
-            {
-                shader->use();
+            {                
                 this->updateMVP(shader);
+                shader->use();
+                
                 glBindVertexArray(this->VAO);
+                
                 glDrawElements(GL_TRIANGLES, this->nrOfIndices, GL_UNSIGNED_INT, 0);
+                
                 glBindVertexArray(0);
-                shader->unuse();
+                glUseProgram(0);
+                //glActiveTexture(0);
+                //glBindTexture(GL_TEXTURE_2D, 0);
             }
             
             void move(const Eigen::Vector3f position)
@@ -532,7 +633,7 @@ namespace machygl
             model( 
                 Eigen::Vector3f position,
                 std::vector<shader*>& shaders,
-                std::vector<texture*>& textures,
+                std::vector<machygl::texture*>& textures,
                 std::vector<mesh*>& meshes
             )
             {
@@ -541,14 +642,14 @@ namespace machygl
                 for (auto* i : shaders)
                     this->shaders.push_back(new shader(*i));
                 for (auto* i : textures)
-                    this->textures.push_back(new texture(*i));
+                    this->textures.push_back(i->clone());
+
                 for (auto* i : meshes)
                 {
                     printf("[MODEL] adding meshes\n");    
                     this->meshes.push_back(new mesh(*i));
                 }
-                
-                for (auto* i: this->meshes)
+                for (auto& i : this->meshes)
                     i->move(this->position);
             }
 
@@ -574,12 +675,12 @@ namespace machygl
             {
                 for (auto& i : this->meshes)
                 {
-                    //this->shaders[0]->use();
                     this->textures[0]->bind(0);
-                    //this->shaders[0]->unuse();
+                    
                     i->render(this->shaders[0]);
                     //this->textures[0]->unbind();
                 }
+                //this->shaders[0]->unuse();
             }
     };
 
@@ -601,6 +702,8 @@ namespace machygl
             std::vector<shader*> shaders;
 
             std::vector<texture*> textures;
+            std::vector<texture*> textures2;
+
 
             machygl_variables *machygl_var;
             GLFWwindow* win_;

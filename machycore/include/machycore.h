@@ -94,7 +94,7 @@ namespace machycore
         /* mutex for thread safe usage */
         std::mutex mtx_;
         /* constructor */
-        texture_data() : dirty(true){}
+        texture_data() : dirty(true){ printf("texture got copied!\n"); }
     };
 
     struct camera_data{

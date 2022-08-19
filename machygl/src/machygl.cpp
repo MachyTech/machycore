@@ -65,9 +65,39 @@ namespace machygl
                 this->shaders.push_back(new shader("shaders/basic.glsl"));
                 /* meshes */
                 std::vector<mesh*> meshes;
+                std::vector<mesh*> meshes2;
                 /* textures */
+                //this->textures.push_back(new static_texture("media/lena.jpg", GL_TEXTURE_2D));
+                this->textures.push_back(new dynamic_texture(texture_, GL_TEXTURE_2D));
 
                 meshes.push_back(
+                    new mesh(
+                        new machygl::quad(),
+                        Eigen::Vector3f{0.0f,  0.f, 0.5f},
+                        Eigen::Vector3f{0.f, PI*1.f, PI*1.f},
+                        Eigen::Vector3f{2.f, 2.f, 2.f}
+                    )
+                );
+                meshes.push_back(
+                    new mesh(
+                        new machygl::quad(),
+                        Eigen::Vector3f{0.0f,  0.f, 0.5f},
+                        Eigen::Vector3f{0.f, PI*1.f, PI*1.f},
+                        Eigen::Vector3f{2.f, 2.f, 0.f}
+                    )
+                );
+                
+                //this->textures.push_back(new texture("media/beach.jpg", GL_TEXTURE_2D));
+                this->models.push_back(new model(
+                    Eigen::Vector3f{0.f, 0.f, 0.f},
+                    shaders,
+                    textures,
+                    meshes
+                ));
+                
+                this->textures2.push_back(new static_texture("media/beach.jpg", GL_TEXTURE_2D));
+
+                meshes2.push_back(
                     new mesh(
                         new machygl::cube(),
                         Eigen::Vector3f{0.3f, 0.f, 0.f},
@@ -76,14 +106,52 @@ namespace machygl
                     )
                 );
                 
-                this->textures.push_back(new texture("media/beach.jpg", GL_TEXTURE_2D));
+                meshes2.push_back(
+                    new mesh(
+                        new machygl::quad(),
+                        Eigen::Vector3f{-0.3f, 0.f, 0.f},
+                        Eigen::Vector3f{0.f, 0.25*PI, 0.125*PI},
+                        Eigen::Vector3f{0.1f, 0.1f, 0.1f}
+                    )
+                );
 
                 this->models.push_back(new model(
-                    Eigen::Vector3f{0.f, 0.f, 0.f},
+                    Eigen::Vector3f{-0.4f, -0.3f, 0.f},
+                    shaders,
+                    textures2,
+                    meshes2
+                ));
+                break;
+            }
+            case TEST_AR_SCENE:
+            {
+                /* shaders */
+                this->shaders.push_back(new shader("shaders/basic.glsl"));
+                /* meshes */
+                std::vector<mesh*> meshes;
+                std::vector<mesh*> meshes2;
+                /* textures */
+                //machygl::dynamic_texture* d_tex = new dynamic_texture(texture_, GL_TEXTURE_2D);
+                //this->textures.push_back(new dynamic_texture(texture_, GL_TEXTURE_2D));
+                this->textures.push_back(new static_texture("media/beach.jpg", GL_TEXTURE_2D));
+
+                meshes.push_back(
+                    new mesh(
+                        new machygl::triangle(),
+                        Eigen::Vector3f{0.0f,  0.f, 0.f},
+                        Eigen::Vector3f{0.f, PI*1.f, PI*1.f},
+                        Eigen::Vector3f{2.f, 2.f, 2.f}
+                    )
+                );
+
+                this->models.push_back(new  model(
+                    Eigen::Vector3f(0.f, 0.f, 0.f),
                     shaders,
                     textures,
                     meshes
                 ));
+
+                break;
             }
         }
         this->scene_dirty = false;
@@ -96,7 +164,7 @@ namespace machygl
         
         /* clear the viewport */
         glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         glEnable(GL_DEPTH_TEST);  
         
@@ -104,12 +172,17 @@ namespace machygl
             i->render();
 
         //this->models[0]->rotateY(this->shaders[0]->getTime());
-        //this->models[0]->rotateX(this->shaders[0]->getTime());
+        this->models[1]->rotateX(this->shaders[0]->getTime()*0.5);
 
         //glEnable(GL_BLEND);  
         
         glfwSwapBuffers(win_);
         glFlush();
+
+        glBindVertexArray(0);
+	    glUseProgram(0);
+	    glActiveTexture(0);
+	    glBindTexture(GL_TEXTURE_2D, 0);
 
         glfwSetFramebufferSizeCallback(win_, [](GLFWwindow* window, int width, int height){
             glViewport(0,0, width, height);
