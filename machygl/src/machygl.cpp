@@ -165,7 +165,7 @@ namespace machygl
         for (auto& i : this->models)
             i->render();
         
-        this->shaders[0]->printFPS();
+        //this->shaders[0]->printFPS();
         this->shaders[0]->tick();
 
         this->models[1]->rotateY(this->shaders[0]->getTime());

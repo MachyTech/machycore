@@ -218,7 +218,6 @@ namespace machygl
                 realize();
             }
             GLfloat getTime(){
-                printf("time : %f", this->uniforms->u_time);    
                 return this->uniforms->u_time;
             };
             
