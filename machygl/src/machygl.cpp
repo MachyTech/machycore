@@ -62,7 +62,7 @@ namespace machygl
             case ROTATING_TRIANGLE:
             {
                 /* shaders */
-                this->shaders.push_back(new shader("shaders/basic.glsl"));
+                this->shaders.push_back(new shader("shaders/basic.glsl"));  
                 /* meshes */
                 std::vector<mesh*> meshes;
                 std::vector<mesh*> meshes2;
@@ -73,20 +73,12 @@ namespace machygl
                 meshes.push_back(
                     new mesh(
                         new machygl::quad(),
-                        Eigen::Vector3f{0.0f,  0.f, 0.5f},
-                        Eigen::Vector3f{0.f, PI*1.f, PI*1.f},
+                        Eigen::Vector3f{0.f,  0.f, 0.5f},
+                        Eigen::Vector3f{0.0f, PI*1.f, PI*1.f},
                         Eigen::Vector3f{2.f, 2.f, 2.f}
                     )
                 );
-                meshes.push_back(
-                    new mesh(
-                        new machygl::quad(),
-                        Eigen::Vector3f{0.0f,  0.f, 0.5f},
-                        Eigen::Vector3f{0.f, PI*1.f, PI*1.f},
-                        Eigen::Vector3f{2.f, 2.f, 0.f}
-                    )
-                );
-                
+
                 //this->textures.push_back(new texture("media/beach.jpg", GL_TEXTURE_2D));
                 this->models.push_back(new model(
                     Eigen::Vector3f{0.f, 0.f, 0.f},
@@ -95,32 +87,34 @@ namespace machygl
                     meshes
                 ));
                 
-                this->textures2.push_back(new static_texture("media/beach.jpg", GL_TEXTURE_2D));
+                meshes.clear();
+                textures.clear();
+                
+                //for (auto i : this->textures)
+                //    delete i;
 
-                meshes2.push_back(
+                meshes.push_back(
                     new mesh(
                         new machygl::cube(),
-                        Eigen::Vector3f{0.3f, 0.f, 0.f},
-                        Eigen::Vector3f{0.f, 0.25*PI, 0.125*PI},
-                        Eigen::Vector3f{0.5f, 0.5f, 0.5f}
-                    )
-                );
-                
-                meshes2.push_back(
-                    new mesh(
-                        new machygl::quad(),
-                        Eigen::Vector3f{-0.3f, 0.f, 0.f},
-                        Eigen::Vector3f{0.f, 0.25*PI, 0.125*PI},
-                        Eigen::Vector3f{0.1f, 0.1f, 0.1f}
+                        Eigen::Vector3f{-0.3f,  0.f, 0.5f},
+                        Eigen::Vector3f{0.25f*PI, 0.f, 0.f},
+                        Eigen::Vector3f{0.2f, 0.2f, 0.2f}
                     )
                 );
 
+                this->textures.push_back(new static_texture("media/beach.jpg", GL_TEXTURE_2D));
+
                 this->models.push_back(new model(
-                    Eigen::Vector3f{-0.4f, -0.3f, 0.f},
+                    Eigen::Vector3f{0.f, 0.f, 0.f},
                     shaders,
-                    textures2,
-                    meshes2
+                    textures,
+                    meshes
                 ));
+
+                meshes.clear();
+                textures.clear();
+                //for (auto i : this->textures2)
+                //    delete i;
                 break;
             }
             case TEST_AR_SCENE:
@@ -170,9 +164,12 @@ namespace machygl
         
         for (auto& i : this->models)
             i->render();
+        
+        this->shaders[0]->printFPS();
+        this->shaders[0]->tick();
 
-        //this->models[0]->rotateY(this->shaders[0]->getTime());
-        this->models[1]->rotateX(this->shaders[0]->getTime()*0.5);
+        this->models[1]->rotateY(this->shaders[0]->getTime());
+        //this->models[0]->rotateX(this->shaders[0]->getTime()*0.5);
 
         //glEnable(GL_BLEND);  
         
@@ -283,13 +280,12 @@ namespace machygl
         
         this->program = glCreateProgram();
 
+
         if (!link_shader(machygraph_vertex_shader, fragment_shader))
         {
             printf("error linking shader!\n");
         }
         fragment_shader.erase();
-
-        uniforms->u_frame;
 
         this->shader_dirty = false;
     }

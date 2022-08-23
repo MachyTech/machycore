@@ -160,7 +160,7 @@ namespace machygl
         /* uniform values */
         GLfloat u_fps;
         GLfloat u_time;
-        GLfloat u_frame;
+        GLint u_frame;
         /* locations of uniforms in the program */
         GLuint time_location;
         GLuint frame_location;
@@ -189,6 +189,9 @@ namespace machygl
 
             machygl::uniform * uniforms;
             
+            long first_frame_time;
+            float previous_time;
+
             bool shader_dirty;
             void realize();
             void update_uniforms()
@@ -205,21 +208,6 @@ namespace machygl
 
             std::string read_shader(std::string direction);
 
-            void tick()
-            {
-                float previous_time = uniforms->u_time;
-
-                long current_frame_time = machycore::current_time_ms();
-
-                uniforms->u_time = (current_frame_time - uniforms->first_frame_time) / 1000.0;
-                uniforms->u_fps = 1 / (uniforms->u_time - previous_time);
-
-                if(uniforms->u_frame==0)
-                    uniforms->first_frame_time = current_frame_time;
-                
-                uniforms->u_frame++;
-            }
-
             int get_compile_data(GLuint shader);
             bool link_shader(std::string ver_src, std::string frag_src);
         public:
@@ -229,14 +217,37 @@ namespace machygl
                 this->set_image_shader(direction);
                 realize();
             }
-            GLfloat getTime(){return uniforms->u_time;};
+            GLfloat getTime(){
+                printf("time : %f", this->uniforms->u_time);    
+                return this->uniforms->u_time;
+            };
+            
+            void tick()
+            {
+                float previous_time = uniforms->u_time;
+
+                long current_frame_time = machycore::current_time_ms();
+
+                uniforms->u_time = (current_frame_time - this->first_frame_time) / 1000.0;
+                uniforms->u_fps = 1 / (uniforms->u_time - previous_time);
+
+                if(uniforms->u_frame==0)
+                    this->first_frame_time = current_frame_time;
+                
+                uniforms->u_frame++;
+            }
+
             void use()
             {
-                this->tick();
                 if(this->shader_dirty)
                     realize();
                 glUseProgram(this->program);
                 this->update_uniforms();
+            }
+
+            void printFPS()
+            {
+                printf("elapsed time: %f, elapsed frame: %d fps: %f\n", uniforms->u_time, uniforms->u_frame, uniforms->u_fps);
             }
 
             void unuse()
@@ -300,6 +311,7 @@ namespace machygl
 
             virtual void bind(const GLint texture_unit)
             {
+                
                 this->tex->mtx_.lock();
 
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
@@ -310,8 +322,12 @@ namespace machygl
                 
                 this->tex->mtx_.unlock();
                 glGenerateMipmap(this->getType());
+
                 glActiveTexture(GL_TEXTURE0 + texture_unit);
                 glBindTexture(this->getType(), this->getID());
+                
+                this->unbind();
+
             }
 
             virtual void unbind() {
@@ -459,40 +475,50 @@ namespace machygl
             cube()
                 : primitive()
             {
+                /* based upon a net: there are only 8 position, but there are more than 8 distinct combinations */
+                /* of position and texture coordinates */
                 Vertex vertices[] { 
-                    //Position              //Color             //Texcoords     //Normals   
-			        {-0.5f, 0.5f, 0.5f,         1.f, 0.f, 0.f,      0.f, 1.f,       0.f, 0.f, 1.f},
-			        {-0.5f, -0.5f, 0.5f,	    0.f, 1.f, 0.f,		0.f, 0.f,		0.f, 0.f, 1.f},
-			        {0.5f, -0.5f, 0.5f,			0.f, 0.f, 1.f,		1.f, 0.f,		0.f, 0.f, 1.f},
-			        {0.5f, 0.5f, 0.5f,			1.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, 1.f},
+                    //Position                  //Color             //Texcoords     //Normals   
+			        {-0.5f, -0.5f, -0.5f,       1.f, 0.f, 0.f,      0.f, 0.f,       0.f, 0.f, 1.f},
+			        {0.5f, -0.5f, -0.5f,	    0.f, 1.f, 0.f,		1.f, 0.f,		0.f, 0.f, 1.f},
+			        {0.5f, 0.5f, -0.5f,			0.f, 0.f, 1.f,		2.f, 0.f,		0.f, 0.f, 1.f},
+			        {-0.5f, 0.5f, -0.5f,		1.f, 1.f, 0.f,		3.f, 0.f,		0.f, 0.f, 1.f},
+                    {-0.5f, -0.5f, -0.5f,       1.f, 1.f, 1.f,      4.f, 0.f,       0.f, 0.f, 1.f},
 
-			        {0.5f, 0.5f, -0.5f,			1.f, 0.f, 0.f,		0.f, 1.f,		0.f, 0.f, -1.f},
-			        {0.5f, -0.5f, -0.5f,	    0.f, 1.f, 0.f,		0.f, 0.f,		0.f, 0.f, -1.f},
-			        {-0.5f, -0.5f, -0.5f,		0.f, 0.f, 1.f,		1.f, 0.f,		0.f, 0.f, -1.f},
-			        {-0.5f, 0.5f, -0.5f,	    1.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, -1.f}
+			        {-0.5f, -0.5f, 0.5f,		1.f, 0.f, 0.f,		0.f, 1.f,		0.f, 0.f, -1.f},
+			        {0.5f, -0.5f, 0.5f,	        0.f, 1.f, 0.f,		1.f, 1.f,		0.f, 0.f, -1.f},
+			        {0.5f, 0.5f, 0.5f,		    0.f, 0.f, 1.f,		2.f, 1.f,		0.f, 0.f, -1.f},
+			        {-0.5f, 0.5f, 0.5f,	        1.f, 1.f, 0.f,		3.f, 1.f,		0.f, 0.f, -1.f},
+                    {-0.5f, -0.5f, 0.5f,        1.f, 1.f, 1.f,      4.f, 1.f,       0.f, 0.f, -1.f},
+                    
+                    {-0.5f, 0.5f, -0.5f,        1.f, 1.f, 1.f,      0.f, -1.f,       0.f, 0.f, -1.f},
+                    {0.5f, 0.5f, -0.5f,          1.f, 1.f, 1.f,      1.f, -1.f,       0.f, 0.f, -1.f},
+
+                    {-0.5, 0.5f, 0.5f,          1.f, 1.f, 1.f,      0.f, 2.f,       0.f, 0.f, -1.f},
+                    {0.5f, 0.5f, 0.5f,          1.f, 1.f, 1.f,      1.f, 2.f,       0.f, 0.f, -1.f}
                 };
 
                 unsigned nrOfVertices = sizeof(vertices) / sizeof(Vertex);
 
                 GLuint indices[] =
                 {
-                    0, 1, 2,
-                    0, 2, 3,
-
-                    7, 6, 1,
-                    7, 1, 0,
-
-                    4, 5, 6,
-                    4, 6, 7,
-
-                    3, 2, 5,
-                    3, 5, 4,
-
-                    4, 7, 0,
-                    4, 0, 3,
-
-                    5, 6, 1,
-                    5, 2, 1
+                    0, 1, 5,  
+                    5, 1, 6,
+                    
+                    1, 2, 6,  
+                    6, 2, 7,
+                    
+                    2, 3, 7,  
+                    7, 3, 8,
+                    
+                    3, 4, 8,  
+                    8, 4, 9,
+                    
+                    10, 11, 0,  
+                    0, 11, 1,
+                    
+                    5, 6, 12, 
+                    12, 6, 13
                 };
 
                 unsigned nrOfIndices = sizeof(indices) / sizeof(GLuint);
@@ -561,7 +587,6 @@ namespace machygl
                 this->vertexarray = new Vertex[this->nrOfVertices];
                 for (size_t i = 0; i < this->nrOfVertices; i++)
                 {
-                    std::cout<<primitive->getVertices()<<std::endl;
                     this->vertexarray[i] = primitive->getVertices()[i];
                 }
 
@@ -576,32 +601,30 @@ namespace machygl
 
             ~mesh()
             {
+                /* some really weird compiler optimizations call the destructor when the pointers are deleted */
                 printf("[MESH] cleaning up\n");
-                glDeleteVertexArrays(1, &this->VAO);
-                glDeleteBuffers(1, &this->VBO);
+                //glDeleteVertexArrays(1, &this->VAO);
+                //glDeleteBuffers(1, &this->VBO);
 
-                if (this->nrOfIndices > 0)
-                {
-                    glDeleteBuffers(1, &this->EBO);
-                }
+                //if (this->nrOfIndices > 0)
+                //{
+                //    glDeleteBuffers(1, &this->EBO);
+                //}
 
-                delete[] this->vertexarray;
-                delete[] this->indices;
+                //delete[] this->vertexarray;
+                //delete[] this->indices;
             }
 
             void render(machygl::shader* shader)
-            {                
+            {     
                 this->updateMVP(shader);
-                shader->use();
+                shader->use();           
                 
                 glBindVertexArray(this->VAO);
                 
                 glDrawElements(GL_TRIANGLES, this->nrOfIndices, GL_UNSIGNED_INT, 0);
-                
+        
                 glBindVertexArray(0);
-                glUseProgram(0);
-                //glActiveTexture(0);
-                //glBindTexture(GL_TEXTURE_2D, 0);
             }
             
             void move(const Eigen::Vector3f position)
@@ -641,14 +664,17 @@ namespace machygl
 
                 for (auto* i : shaders)
                     this->shaders.push_back(new shader(*i));
+                
                 for (auto* i : textures)
                     this->textures.push_back(i->clone());
 
                 for (auto* i : meshes)
                 {
-                    printf("[MODEL] adding meshes\n");    
+                    printf("[MODEL] adding meshes\n");
+                    printf("%p\n", i);    
                     this->meshes.push_back(new mesh(*i));
                 }
+
                 for (auto& i : this->meshes)
                     i->move(this->position);
             }
@@ -673,14 +699,14 @@ namespace machygl
 
             void render()
             {
+                this->textures[0]->bind(0);
+
                 for (auto& i : this->meshes)
                 {
-                    this->textures[0]->bind(0);
-                    
                     i->render(this->shaders[0]);
-                    //this->textures[0]->unbind();
+                    this->textures[0]->unbind();
                 }
-                //this->shaders[0]->unuse();
+                this->shaders[0]->unuse();
             }
     };
 
