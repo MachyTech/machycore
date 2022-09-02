@@ -144,6 +144,49 @@ namespace machycam{
         }
     }
 
+    void cam_session::start_realsense()
+    {
+        rs2::pipeline pipe;
+        rs2::config cfg;
+        cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+        cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
+        pipe.start(cfg);
+        
+        rs2::colorizer color_map;
+        rs2::align align_to_color(RS2_STREAM_COLOR);
+        for(;;){
+            rs2::frameset frameset = pipe.wait_for_frames();
+
+            frameset = align_to_color.process(frameset);
+
+            float timestamp = frameset.get_timestamp();
+
+            auto depth = frameset.get_depth_frame();
+            auto color_depth = color_map.colorize(depth);
+            auto color = frameset.get_color_frame();
+            
+            const int w = depth.as<rs2::video_frame>().get_width();
+            const int h = depth.as<rs2::video_frame>().get_height();
+            cv::Mat color_image(cv::Size(w, h), CV_8UC3, (void*)color.get_data(), cv::Mat::AUTO_STEP);
+            cv::Mat depth_image(cv::Size(w, h), CV_8UC3, (void*)color_depth.get_data(), cv::Mat::AUTO_STEP);
+
+            cam_->mtx_.lock();
+            cam_->frame = color_image.clone();
+            cam_->timestamp = timestamp;
+            cam_->fps = frameset.get_timestamp() - timestamp;
+            cam_->mtx_.unlock();
+
+            /* lock the texture struct and copy the image in bytes */
+            if(texture_->mtx_.try_lock())
+            {
+                texture_->width = color_image.cols;
+                texture_->height = color_image.rows;
+                texture_->image = machyvision::cvMat2TexInput(color_image);
+                texture_->mtx_.unlock();
+            }
+        }
+    }
+
     void cam_session::start_rtsp()
     {
         /* open the rtsp stream with opencv build-in rtsp client */

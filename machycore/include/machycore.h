@@ -73,6 +73,16 @@ namespace machycore
         std::mutex mtx_;
     };
 
+    struct pose_object_obj{
+        float x, y, z;
+        pose_object_obj(float x, float y, float z) : x(x), y(y), z(z){}
+    };
+
+    struct pose_object_data{
+        std::vector<pose_object_obj> obj_array;
+        std::mutex mtx_;
+    };
+
     struct controller_data{
         // joystick data
         float normalizedAngle;
@@ -104,7 +114,7 @@ namespace machycore
     struct feature_data {
         std::vector<feature_obj> feature_array;
         std::mutex mtx_;
-    }
+    };
 
     struct pose_obj {
         float x, y, z, qx, qy, qz, qw;

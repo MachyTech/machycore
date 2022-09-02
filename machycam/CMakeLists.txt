@@ -7,6 +7,8 @@ set_target_properties(machycam PROPERTIES SOVERSION 0.0.1)
 
 find_package( OpenCV REQUIRED )
 
+find_package( realsense2 REQUIRED)
+
 target_include_directories(machycam PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${OpenCV_INCLUDE_DIRS}
@@ -25,7 +27,7 @@ if (NOT TARGET machyvision)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machyvision libs/machycore/machyvision)
 endif()
 
-target_link_libraries(machycam PRIVATE dark Boost::boost -lX11 machycore machyvision ${OpenCV_LIBS})
+target_link_libraries(machycam PRIVATE dark Boost::boost -lX11 machycore machyvision ${OpenCV_LIBS} ${realsense2_LIBRARY})
 
 # ---------------------------------------------------------
 # Install

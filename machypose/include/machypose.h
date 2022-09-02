@@ -36,6 +36,8 @@ namespace machypose
                 boost::asio::thread_pool& pool,
                 machycore::pose_data* pose_data,
                 machycore::feature_data* feature_data,
+                machycore::yolo_data* yolo_data,
+                machycore::pose_object_data* pose_object_data,
                 machycore::texture_data* texture,
                 machycore::camera_data* cam,
                 machycore::camera_data* cam2,
@@ -44,6 +46,8 @@ namespace machypose
             io_context_(io_context),
             pose_data_(pose_data),
             feature_data_(feature_data),
+            yolo_data_(yolo_data),
+            pose_object_data_(pose_object_data),
             texture_(texture),
             cam_(cam),
             cam2_(cam2),
@@ -64,6 +68,8 @@ namespace machypose
             boost::asio::thread_pool& pool_;
             machycore::pose_data* pose_data_;
             machycore::feature_data* feature_data_;
+            machycore::yolo_data* yolo_data_;
+            machycore::pose_object_data* pose_object_data_;
             machycore::texture_data* texture_;
             machycore::camera_data* cam_;
             machycore::camera_data* cam2_;

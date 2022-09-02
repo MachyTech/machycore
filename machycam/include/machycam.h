@@ -12,6 +12,8 @@
 
 #include <opencv4/opencv2/opencv.hpp>
 
+#include <librealsense2/rs.hpp>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
@@ -23,6 +25,7 @@
 #define READ_IMAGE 1
 #define USB_CAM 2
 #define SCREEN_CAPTURE 3
+#define REALSENSE 4
 
 namespace machycam
 {
@@ -71,7 +74,8 @@ namespace machycam
             cam_session(boost::asio::io_context& io_context, 
                         boost::asio::thread_pool& pool,
                         machycore::texture_data* texture,
-                        machycore::camera_data* cam, int type)
+                        machycore::camera_data* cam, 
+                        int type)
                 : io_context_(io_context),
                 pool_(pool),
                 ticker_(io_context),
@@ -82,7 +86,6 @@ namespace machycam
                 switch(type)
                 {
                     case RTSP_STREAM:
-                        printf("starting rtsp stream...\n");
                         boost::asio::post(pool_, [this](){for(;;){start_rtsp();};});
                         break;
                     case READ_IMAGE:
@@ -93,6 +96,9 @@ namespace machycam
                         break;
                     case SCREEN_CAPTURE:
                         boost::asio::post(pool_, [this](){start_screencapture_new();});
+                        break;
+                    case REALSENSE:
+                        boost::asio::post(pool_, [this](){for(;;){start_realsense();};});
                         break;
                 }
             };
@@ -110,6 +116,7 @@ namespace machycam
             void capture_x11image(std::vector<uint8_t>& Pixels, int& width, int& height, int& BitsPerPixel);
             void start_screencapture();
             void start_screencapture_new();
+            void start_realsense();
     };
 }
 
