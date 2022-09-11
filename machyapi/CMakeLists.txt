@@ -8,7 +8,7 @@ add_library(machyapi STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/machyapi.cpp)
 set_target_properties(machyapi PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(machyapi PROPERTIES SOVERSION 0.0.1)
 
-target_include_directories(machyapi PUBLIC ${CMAKE_SOURCE_DIR}/libs/machycore/api/include)
+target_include_directories(machyapi PUBLIC ${CMAKE_SOURCE_DIR}/libs/machycore/machyapi/include)
 
 if (NOT TARGET machycore)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machycore libs/machycore/machycore)
@@ -17,7 +17,7 @@ if (NOT TARGET manualcontrol)
     add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/manualcontrol libs/machycore/manualcontrol)
 endif()
 if (NOT TARGET nlohmann_json)
-    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/api/libs/json libs/api/json)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libs/machycore/machyapi/libs/json libs/machyapi/json)
 endif()
 target_link_libraries(machyapi PUBLIC Boost::boost nlohmann_json machycore manualcontrol)
 
