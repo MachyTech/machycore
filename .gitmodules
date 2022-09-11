@@ -1,5 +1,5 @@
-[submodule "api/libs/json"]
-	path = api/libs/json
+[submodule "machyapi/libs/json"]
+	path = machyapi/libs/json
 	url = https://github.com/nlohmann/json.git
 [submodule "vendor/glfw"]
 	path = vendor/glfw
