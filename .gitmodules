@@ -1,9 +1,18 @@
 [submodule "machyapi/libs/json"]
 	path = machyapi/libs/json
-	url = https://github.com/nlohmann/json.git
+	url = git@github.com:nlohmann/json.git
 [submodule "vendor/glfw"]
 	path = vendor/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "vendor/eigen"]
+	path = vendor/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "libs/glfw"]
+	path = libs/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "libs/eigen"]
+	path = libs/eigen
+	url = https://gitlab.com/libeigen/eigen.git
 [submodule "machyvision/libs/darknet"]
 	path = machyvision/libs/darknet
 	url = https://github.com/AlexeyAB/darknet.git
@@ -13,3 +22,6 @@
 [submodule "machypose/libs/Pangolin"]
 	path = machypose/libs/Pangolin
 	url = https://github.com/stevenlovegrove/Pangolin.git
+[submodule "libs/machyapi/libs/json"]
+	path = libs/machyapi/libs/json
+	url = git@github.com:nlohmann/json.git
